@@ -1,0 +1,2 @@
+[overrides]
+"componentized:http" = { path = "../wit" }

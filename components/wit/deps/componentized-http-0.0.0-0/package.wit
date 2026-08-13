@@ -1,0 +1,6 @@
+package componentized:http@0.0.0-0;
+
+world imports {
+  import wasi:clocks/types@0.3.1;
+  import wasi:http/types@0.3.1;
+}
