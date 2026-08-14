@@ -1,2 +1,6 @@
 package componentized:components;
 
+world http-client {
+    import wasi:http/client@0.3.1;
+    export componentized:http/client@0.0.0-0;
+}

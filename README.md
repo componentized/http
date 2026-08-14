@@ -27,8 +27,7 @@ make components
 
 ### Components
 
-TODO
-<!-- - [`client`](./components/client/) -->
+- [`http-client`](./components/http-client/)
 
 ## Community
 
