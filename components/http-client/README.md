@@ -1,6 +1,6 @@
 # `http-client`
 
-A higher-level HTTP client that delegates to `wasi:http/client`.
+A higher-level HTTP client that delegates to wasi:http/client.
 
 ## Request Functions
 
