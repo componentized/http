@@ -1,13 +1,16 @@
 SHELL := /bin/bash
 
-WKG_CONFIG := $(CURDIR)/.config/wasm-pkg/config.toml
+# prefer paths are relative to the root of the repository, where make runs, to keep the logs readable
+
+WKG_CONFIG := .config/wasm-pkg/config.toml
 
 export RUST_BACKTRACE ?= 1
 export WASMTIME_BACKTRACE_DETAILS ?= 1
 
-COMPONENTS_DIR := $(abspath target/components)
-TOOLS_DIR := $(abspath target/tools)
-export PATH := $(TOOLS_DIR)/bin:$(PATH)
+COMPONENTS_DIR := target/components
+TOOLS_DIR := target/tools
+# absolute, tools also run from other directories, e.g. `cd components && wkg fetch`
+export PATH := $(abspath $(TOOLS_DIR))/bin:$(PATH)
 
 # cargo binstall downloads prebuilt binaries, without it the tools are built with cargo install
 CARGO_INSTALL := $(if $(shell command -v cargo-binstall 2> /dev/null),cargo binstall --no-confirm --disable-telemetry,cargo install)
@@ -125,7 +128,7 @@ wit/deps: wkg.toml $(shell find wit -type f -name "*.wit" -not -path "deps") | $
 	wkg fetch --config $(WKG_CONFIG)
 
 components/wit/deps: wit/deps components/wkg.toml $(shell find components/wit -type f -name "*.wit" -not -path "deps") | $(call tool,wkg)
-	( cd components && wkg fetch --config $(WKG_CONFIG) )
+	( cd components && wkg fetch --config ../$(WKG_CONFIG) )
 
 # sign published components with cosign, `SIGN=false` to push without signing, e.g. to a local registry
 SIGN ?= true

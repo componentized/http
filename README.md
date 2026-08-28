@@ -3,6 +3,7 @@
 A collection of utility components that remix wasi:http types and interfaces.
 
 - [Components](#components)
+  - [Choosing a component variant](#choosing-a-component-variant)
 - [Build](#build)
 - [Community](#community)
   - [Code of Conduct](#code-of-conduct)
@@ -15,15 +16,35 @@ A collection of utility components that remix wasi:http types and interfaces.
 ## Components
 
 - [`client`](./components/client/)
+- [`trace`](./components/trace/)
+- [`trace-client`](./components/trace-client/)
+- [`trace-handler`](./components/trace-handler/)
+- [`trace-componentized-client`](./components/trace-componentized-client/)
+- [`trace-types`](./components/trace-types/)
+
+### Choosing a component variant
+
+Due to resource types being unique to the instance that defines them in the Component Model, fine grain composition of the `wasi:http` interfaces can be persnickety. Pick the most specific component that covers the interfaces the target component imports. While the base component is more universal, a larger surface area asks the host for capabilities the target component doesn't use.
+
+For example, with the `trace-*` components:
+
+| The target component imports                                  | Use                                                                      |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `wasi:http/types`                                             | [`trace-types`](./components/trace-types/)                               |
+| `wasi:http/types` and `wasi:http/client`                      | [`trace-client`](./components/trace-client/)                             |
+| `wasi:http/types` and `wasi:http/handler`                     | [`trace-handler`](./components/trace-handler/)                           |
+| `wasi:http/types`, `wasi:http/client` and `wasi:http/handler` | [`trace`](./components/trace/)                                           |
+| `componentized:http/client`                                   | [`trace-componentized-client`](./components/trace-componentized-client/) |
+
+`trace-client`, `trace-handler` and `trace` also trace `wasi:http/types`, don't combine them with `trace-types`.
+
+The `wasi:http/handler` exported by `trace-handler` and `trace` takes requests created with their exported `wasi:http/types`. Use them in front of a component that forwards requests with `wasi:http/handler`, a host serving incoming requests can't call them directly.
 
 ## Build
 
-A [dev container](https://containers.dev) is available that contains the necessary tools and configuration out of the box.
-
 Prereqs:
 - a rust toolchain
-- [`wasm-tools`](https://github.com/bytecodealliance/wasm-tools)
-- [`wkg`](https://github.com/bytecodealliance/wasm-pkg-tools)
+- [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall), optional, to download prebuilt tools instead of building them
 
 ```sh
 make components
@@ -31,15 +52,7 @@ make components
 
 The build creates each component in [`components`](./components) into `target/components`, e.g. the client at `target/components/client/client.wasm`, along with `target/components/interface.wasm`, the `componentized:http` WIT package. Each component is also built with debug info, e.g. `target/components/client/client.debug.wasm`.
 
-```sh
-make test
-```
-
-The WIT dependencies in each `wit/deps` directory are fetched rather than committed, pinned by the `wkg.lock` files. The make targets fetch them as needed. To fetch or update them directly, e.g. before building the Rust components with `cargo`, whose bindings are generated from the WIT:
-
-```sh
-make wit
-```
+The cli tools the build uses, [`static-config`](https://github.com/componentized/static-config), [`wasm-tools`](https://github.com/bytecodealliance/wasm-tools), [`wac`](https://github.com/bytecodealliance/wac) and [`wkg`](https://github.com/bytecodealliance/wasm-pkg-tools), are pinned in [`tools/Cargo.toml`](./tools/Cargo.toml) and installed into `target/tools` as needed, or ahead of time with `make tools`. Dependabot bumps the pinned versions.
 
 ## Community
 
