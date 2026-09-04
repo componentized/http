@@ -1,4 +1,4 @@
-package componentized:http@0.0.0-0;
+package componentized:http@0.1.0-dev;
 
 interface client {
   enum method {
