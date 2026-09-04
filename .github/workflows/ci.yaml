@@ -77,11 +77,11 @@ jobs:
         run: tar -xvf components.tar -C lib
       - name: Get interface version
         id: interface_version
-        run: echo ::set-output name=VERSION::$( wasm-tools component wit lib/interface.wasm --json | jq -r '.packages[0].name' | cut -d'@' -f2 )}
+        run: echo "VERSION=$( wasm-tools component wit lib/interface.wasm --json | jq -r '.packages[0].name' | cut -d'@' -f2 )" >> $GITHUB_OUTPUT
       - name: Get tag version
         if: startsWith(github.ref, 'refs/tags/')
         id: tag_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
