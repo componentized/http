@@ -69,8 +69,9 @@ endif
 	@$(eval DESCRIPTION := $(shell head -n 3 "lib/${FILE}.md" | tail -n 1))
 	@$(eval REVISION := $(shell git rev-parse HEAD)$(shell git diff --quiet HEAD && echo "+dirty"))
 	@$(eval TAG := $(patsubst v%,%,$(subst +,_,$(VERSION))))
+	@$(eval IMAGE := $(if $(filter interface.wasm,$(FILE)),${REPOSITORY}:${TAG},${REPOSITORY}/${COMPONENT}:${TAG}))
 
-	@echo "::group::${FILE} -> ${REPOSITORY}/${COMPONENT}:${TAG}"
+	@echo "::group::${FILE} -> ${IMAGE}"
 	@DIGEST=$$( \
 		wkg oci push \
 			--annotation "org.opencontainers.image.title=${COMPONENT}" \
@@ -79,11 +80,11 @@ endif
 			--annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}.git" \
 			--annotation "org.opencontainers.image.revision=${REVISION}" \
 			--annotation "org.opencontainers.image.licenses=Apache-2.0" \
-			"${REPOSITORY}/${COMPONENT}:${TAG}" \
+			"${IMAGE}" \
 			"lib/${FILE}" \
 			2>&1 \
 			| tee /dev/stderr \
 			| grep -o 'sha256:[a-f0-9]\{64\}' \
 	) ; \
-	cosign sign --yes "${REPOSITORY}/${COMPONENT}:${TAG}@$${DIGEST}"
+	cosign sign --yes "${IMAGE}@$${DIGEST}"
 	@echo "::endgroup::"
