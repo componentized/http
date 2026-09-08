@@ -20,6 +20,8 @@ Prereqs:
 - a rust toolchain
 - [`wasm-tools`](https://github.com/bytecodealliance/wasm-tools)
 - [`wkg`](https://github.com/bytecodealliance/wasm-pkg-tools)
+- [`wac`](https://github.com/bytecodealliance/wac)
+- [`static-config`](https://github.com/componentized/static-config/)
 
 ```sh
 make components
@@ -27,7 +29,19 @@ make components
 
 ### Components
 
+- [`gate`](./components/gate/)
+- [`gate-client`](./components/gate-client/)
+- [`gate-handler`](./components/gate-handler/)
 - [`http-client`](./components/http-client/)
+- [`latch-deny-all`](./components/latch-deny-all/)
+- [`latch-grant-all`](./components/latch-grant-all/)
+- [`latch-method`](./components/latch-method/)
+- [`latch-method-readonly`](./components/latch-method-readonly/)
+- [`latch-method-readonly-config`](./components/latch-method-readonly-config/)
+- [`latch-n2`](./components/latch-n2/)
+- [`latch-n3`](./components/latch-n3/)
+- [`latch-n4`](./components/latch-n4/)
+- [`latch-n5`](./components/latch-n5/)
 
 ## Community
 

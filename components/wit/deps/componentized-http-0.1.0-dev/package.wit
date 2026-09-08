@@ -66,6 +66,83 @@ interface client {
   query: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 }
 
+interface latch {
+  use wasi:http/types@0.3.0.{error-code as http-error-code, request};
+
+  record send-args {
+    request: borrow<request>,
+  }
+
+  record handle-args {
+    request: borrow<request>,
+  }
+
+  variant client-operation {
+    send(send-args),
+  }
+
+  variant handler-operation {
+    handle(handle-args),
+  }
+
+  variant operation {
+    client(client-operation),
+    handler(handler-operation),
+  }
+
+  variant decision {
+    granted,
+    denied(http-error-code),
+  }
+
+  variant error-code {
+    http(http-error-code),
+    other(option<string>),
+  }
+
+  authorize: func(operation: operation) -> result<option<decision>, error-code>;
+}
+
+interface latch0 {
+  use latch.{operation, decision, error-code};
+
+  authorize: func(operation: operation) -> result<option<decision>, error-code>;
+}
+
+interface latch1 {
+  use latch.{operation, decision, error-code};
+
+  authorize: func(operation: operation) -> result<option<decision>, error-code>;
+}
+
+interface latch2 {
+  use latch.{operation, decision, error-code};
+
+  authorize: func(operation: operation) -> result<option<decision>, error-code>;
+}
+
+interface latch3 {
+  use latch.{operation, decision, error-code};
+
+  authorize: func(operation: operation) -> result<option<decision>, error-code>;
+}
+
+interface latch4 {
+  use latch.{operation, decision, error-code};
+
+  authorize: func(operation: operation) -> result<option<decision>, error-code>;
+}
+
 world imports {
   import client;
+  import wasi:clocks/types@0.3.0;
+  import wasi:http/types@0.3.0;
+  import latch;
+}
+world http-latch {
+  import wasi:config/store@0.2.0-rc.1;
+  import wasi:clocks/types@0.3.0;
+  import wasi:http/types@0.3.0;
+
+  export latch;
 }

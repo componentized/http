@@ -3,7 +3,10 @@ SHELL := /bin/bash
 export RUST_BACKTRACE ?= 1
 export WASMTIME_BACKTRACE_DETAILS ?= 1
 
-COMPONENTS = $(sort $(notdir $(patsubst %/,%,$(dir $(wildcard  components/*/Cargo.toml)))))
+CARGO_COMPONENTS = $(sort $(notdir $(patsubst %/,%,$(dir $(wildcard  components/*/Cargo.toml)))))
+CONFIG_COMPONENTS = $(sort $(notdir $(patsubst %/,%,$(dir $(wildcard  components/*/*.properties)))))
+WAC_COMPONENTS = $(sort $(notdir $(patsubst %/,%,$(dir $(wildcard  components/*/*.wac)))))
+COMPONENTS = $(CARGO_COMPONENTS) $(CONFIG_COMPONENTS) $(WAC_COMPONENTS)
 
 .PHONY: all
 all: components
@@ -19,12 +22,14 @@ test:
 	@echo "TODO add tests"
 
 .PHONY: components
-components: lib/interface.wasm $(foreach component,$(COMPONENTS),lib/$(component).wasm $(foreach component,$(COMPONENTS),lib/$(component).debug.wasm))
+components: lib/interface.wasm $(foreach component,$(COMPONENTS),lib/$(component).wasm) $(foreach component,$(COMPONENTS),lib/$(component).debug.wasm)
 
 define BUILD_COMPONENT
 
 .PHONY: components/$1
 components/$1: lib/$1.wasm lib/$1.debug.wasm
+
+ifneq ($(wildcard components/$1/Cargo.toml),)
 
 lib/$1.wasm: Cargo.toml Cargo.lock components/wit/deps $(shell find components/$1 -type f)
 	cargo build -p $1 --target wasm32-unknown-unknown --release
@@ -35,6 +40,28 @@ lib/$1.debug.wasm: Cargo.toml Cargo.lock components/wit/deps $(shell find compon
 	cargo build -p $1 --target wasm32-unknown-unknown
 	wasm-tools component new target/wasm32-unknown-unknown/debug/$(subst -,_,$1).wasm -o lib/$1.debug.wasm
 	cp components/$1/README.md lib/$1.debug.wasm.md
+
+else ifneq ($(wildcard components/$1/$1.properties),)
+
+lib/$1.wasm: components/$1/$1.properties components/$1/README.md
+	static-config -f components/$1/$1.properties -o lib/$1.wasm
+	cp components/$1/README.md lib/$1.wasm.md
+
+lib/$1.debug.wasm: components/$1/$1.properties components/$1/README.md
+	static-config -f components/$1/$1.properties -o lib/$1.debug.wasm
+	cp components/$1/README.md lib/$1.debug.wasm.md
+
+else ifneq ($(wildcard components/$1/$1.wac),)
+
+lib/$1.wasm: components/$1/$1.wac components/$1/README.md $(foreach component,$(CARGO_COMPONENTS),lib/$(component).wasm) $(foreach component,$(CONFIG_COMPONENTS),lib/$(component).wasm)
+	wac compose $(foreach component,$(COMPONENTS),-d local:$(component)=lib/$(component).wasm) -o lib/$1.wasm components/$1/$1.wac
+	cp components/$1/README.md lib/$1.wasm.md
+
+lib/$1.debug.wasm: components/$1/$1.wac components/$1/README.md $(foreach component,$(CARGO_COMPONENTS),lib/$(component).debug.wasm) $(foreach component,$(CONFIG_COMPONENTS),lib/$(component).debug.wasm)
+	wac compose $(foreach component,$(COMPONENTS),-d local:$(component)=lib/$(component).debug.wasm) -o lib/$1.debug.wasm components/$1/$1.wac
+	cp components/$1/README.md lib/$1.debug.wasm.md
+
+endif
 
 endef
 

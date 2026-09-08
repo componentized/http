@@ -4,3 +4,35 @@ world http-client {
     import wasi:http/client@0.3.0;
     export componentized:http/client@0.1.0-dev;
 }
+
+world gate-client {
+    import componentized:http/latch@0.1.0-dev;
+    import wasi:config/store@0.2.0-rc.1;
+    import wasi:logging/logging@0.1.0-draft;
+    import wasi:http/client@0.3.0;
+    export wasi:http/client@0.3.0;
+}
+
+world gate-handler {
+    import componentized:http/latch@0.1.0-dev;
+    import wasi:config/store@0.2.0-rc.1;
+    import wasi:logging/logging@0.1.0-draft;
+    import wasi:http/handler@0.3.0;
+    export wasi:http/handler@0.3.0;
+}
+
+world http-latch {
+    import wasi:config/store@0.2.0-rc.1;
+    export componentized:http/latch@0.1.0-dev;
+}
+
+world http-latch-n {
+    export componentized:http/latch@0.1.0-dev;
+    import componentized:http/latch@0.1.0-dev;
+    import componentized:http/latch1@0.1.0-dev;
+    import componentized:http/latch2@0.1.0-dev;
+    import componentized:http/latch3@0.1.0-dev;
+    import componentized:http/latch4@0.1.0-dev;
+    import wasi:http/client@0.3.0;
+    import wasi:http/types@0.3.0;
+}
