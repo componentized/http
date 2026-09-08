@@ -28,7 +28,7 @@ make components
 ### Components
 
 - [`http-client`](./components/http-client/)
-- [`read-only`](./components/read-only/)
+- [`readonly`](./components/readonly/)
 
 ## Community
 
