@@ -10,6 +10,7 @@ bytes = { workspace = true }
 http = { workspace = true }
 http-body-util = { workspace = true }
 tokio = { workspace = true }
+wac-graph = { workspace = true }
 wasmtime = { workspace = true }
 wasmtime-wasi = { workspace = true }
 wasmtime-wasi-http = { workspace = true }

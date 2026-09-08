@@ -1,0 +1,10 @@
+[package]
+name = "http-latch"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+http-utils = { workspace = true }
+wit-bindgen = { workspace = true }

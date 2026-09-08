@@ -2,11 +2,32 @@
 resolver = "2"
 members = [
     "components/client",
+    "components/gate",
+    "components/gate-client",
+    "components/gate-handler",
+    "components/latch-defer-all",
+    "components/latch-delegate-client",
+    "components/latch-delegate-handler",
+    "components/latch-deny-all",
+    "components/latch-deny-random",
+    "components/latch-dry-run",
+    "components/latch-method",
+    "components/latch-method-readonly",
+    "components/latch-n2",
+    "components/latch-n3",
+    "components/latch-n4",
+    "components/latch-n5",
+    "components/latch-scheme",
+    "components/latch-scheme-httpsonly",
+    "components/latch-trace",
     "components/trace",
     "components/trace-client",
-    "components/trace-handler",
     "components/trace-componentized-client",
+    "components/trace-handler",
     "components/trace-types",
+    "crates/http-latch",
+    "crates/http-latch-n",
+    "crates/http-utils",
     "crates/test-harness",
 ]
 
@@ -14,10 +35,14 @@ members = [
 bytes = "1"
 http = "1"
 http-body-util = "0.1"
+http-latch = { path = "./crates/http-latch" }
+http-latch-n = { path = "./crates/http-latch-n" }
+http-utils = { path = "./crates/http-utils" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 test-harness = { path = "./crates/test-harness" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+wac-graph = "0.11"
 wasmtime = { version = "49", features = ["component-model-async"] }
 wasmtime-wasi = { version = "49", features = ["p3"] }
 wasmtime-wasi-http = { version = "49", default-features = false, features = ["p3", "component-model-async"] }

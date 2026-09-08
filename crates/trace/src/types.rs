@@ -382,28 +382,13 @@ impl Display for TraceRequest {
 
 impl Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            types::Method::Get => f.write_str("get"),
-            types::Method::Head => f.write_str("head"),
-            types::Method::Post => f.write_str("post"),
-            types::Method::Put => f.write_str("put"),
-            types::Method::Delete => f.write_str("delete"),
-            types::Method::Connect => f.write_str("connect"),
-            types::Method::Options => f.write_str("options"),
-            types::Method::Trace => f.write_str("trace"),
-            types::Method::Patch => f.write_str("patch"),
-            types::Method::Other(method) => f.write_str(&method.to_ascii_lowercase()),
-        }
+        f.write_str(&http_utils::format_http_method!(types::Method, self))
     }
 }
 
 impl Display for Scheme {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            types::Scheme::Http => f.write_str("http"),
-            types::Scheme::Https => f.write_str("https"),
-            types::Scheme::Other(scheme) => write!(f, "other<{scheme}>"),
-        }
+        f.write_str(&http_utils::format_http_scheme!(types::Scheme, self))
     }
 }
 

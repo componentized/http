@@ -5,6 +5,40 @@ world client {
     export componentized:http/client@0.1.0-dev;
 }
 
+world gate-client {
+    import componentized:http/latch@0.1.0-dev;
+    import wasi:config/store@0.2.0-rc.1;
+    import wasi:logging/logging@0.1.0-draft;
+    import wasi:http/client@0.3.0;
+    export wasi:http/client@0.3.0;
+}
+
+world gate-handler {
+    import componentized:http/latch@0.1.0-dev;
+    import wasi:config/store@0.2.0-rc.1;
+    import wasi:logging/logging@0.1.0-draft;
+    import wasi:http/handler@0.3.0;
+    export wasi:http/handler@0.3.0;
+}
+
+world latch {
+    import wasi:config/store@0.2.0-rc.1;
+    import wasi:logging/logging@0.1.0-draft;
+    import componentized:http/latch@0.1.0-dev;
+    export componentized:http/latch@0.1.0-dev;
+}
+
+world latch-n {
+    export componentized:http/latch@0.1.0-dev;
+    import latch0: componentized:http/latch@0.1.0-dev;
+    import latch1: componentized:http/latch@0.1.0-dev;
+    import latch2: componentized:http/latch@0.1.0-dev;
+    import latch3: componentized:http/latch@0.1.0-dev;
+    import latch4: componentized:http/latch@0.1.0-dev;
+    import wasi:http/types@0.3.0;
+    import wasi:logging/logging@0.1.0-draft;
+}
+
 world trace-componentized-client {
     import componentized:http/client@0.1.0-dev;
     import wasi:logging/logging@0.1.0-draft;
@@ -32,4 +66,9 @@ world trace-client {
 world trace {
     include trace-client;
     include trace-handler;
+}
+
+/// Insecure random numbers, e.g. to seed `latch-deny-random`.
+world insecure-random {
+    import wasi:random/insecure@0.3.0;
 }

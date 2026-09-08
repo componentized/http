@@ -1,0 +1,6 @@
+package componentized:http;
+
+export new local:latch-scheme{ 
+    store: new local:latch-scheme-httpsonly-config{}.store,
+    ...
+}...;

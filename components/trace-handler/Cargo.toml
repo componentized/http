@@ -15,6 +15,7 @@ client = []
 handler = []
 
 [dependencies]
+http-utils = { workspace = true }
 wit-bindgen = { workspace = true, features = ["async-spawn"] }
 
 [dev-dependencies]
