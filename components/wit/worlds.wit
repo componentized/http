@@ -4,3 +4,8 @@ world http-client {
     import wasi:http/client@0.3.0;
     export componentized:http/client@0.1.0-dev;
 }
+
+world client {
+    import wasi:http/client@0.3.0;
+    export wasi:http/client@0.3.0;
+}

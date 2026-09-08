@@ -20,4 +20,4 @@ A higher-level HTTP client that delegates to wasi:http/client.
 ## The `http-client` World
 
 - exports `componentized:http/client`
-- imports `wasi:http/client@0.3.1`
+- imports `wasi:http/client@0.3`
