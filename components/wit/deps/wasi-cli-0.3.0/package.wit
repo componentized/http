@@ -1,4 +1,4 @@
-package wasi:cli@0.3.1;
+package wasi:cli@0.3.0;
 
 interface types {
   enum error-code {
