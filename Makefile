@@ -65,7 +65,8 @@ ifndef REPOSITORY
 	$(error REPOSITORY is undefined)
 endif
 	@$(eval FILE := $(@:publish-%=%))
-	@$(eval COMPONENT := $(if $(filter %.debug.wasm,$(FILE)),$(FILE:%.debug.wasm=%) (debug),$(FILE:%.wasm=%)))
+	@$(eval COMPONENT := $(if $(filter %.debug.wasm,$(FILE)),$(FILE:%.debug.wasm=%),$(FILE:%.wasm=%)))
+	@$(eval TITLE := $(if $(filter %.debug.wasm,$(FILE)),$(COMPONENT) (debug),$(COMPONENT)))
 	@$(eval DESCRIPTION := $(shell head -n 3 "lib/${FILE}.md" | tail -n 1))
 	@$(eval REVISION := $(shell git rev-parse HEAD)$(shell git diff --quiet HEAD && echo "+dirty"))
 	@$(eval COMPONENT_VERSION := $(if $(filter %.debug.wasm,$(FILE)),${VERSION}+debug,${VERSION}))
@@ -75,7 +76,7 @@ endif
 	@echo "::group::${FILE} -> ${IMAGE}"
 	@DIGEST=$$( \
 		wkg oci push \
-			--annotation "org.opencontainers.image.title=${COMPONENT}" \
+			--annotation "org.opencontainers.image.title=${TITLE}" \
 			--annotation "org.opencontainers.image.description=${DESCRIPTION}" \
 			--annotation "org.opencontainers.image.version=${COMPONENT_VERSION}" \
 			--annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}.git" \
