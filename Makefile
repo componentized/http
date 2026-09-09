@@ -65,10 +65,11 @@ ifndef REPOSITORY
 	$(error REPOSITORY is undefined)
 endif
 	@$(eval FILE := $(@:publish-%=%))
-	@$(eval COMPONENT := $(FILE:%.wasm=%))
+	@$(eval COMPONENT := $(if $(filter %.debug.wasm,$(FILE)),$(FILE:%.debug.wasm=%) (debug),$(FILE:%.wasm=%)))
 	@$(eval DESCRIPTION := $(shell head -n 3 "lib/${FILE}.md" | tail -n 1))
 	@$(eval REVISION := $(shell git rev-parse HEAD)$(shell git diff --quiet HEAD && echo "+dirty"))
-	@$(eval TAG := $(patsubst v%,%,$(subst +,_,$(VERSION))))
+	@$(eval COMPONENT_VERSION := $(if $(filter %.debug.wasm,$(FILE)),${VERSION}+debug,${VERSION}))
+	@$(eval TAG := $(patsubst v%,%,$(subst +,_,$(COMPONENT_VERSION))))
 	@$(eval IMAGE := $(if $(filter interface.wasm,$(FILE)),${REPOSITORY}:${TAG},${REPOSITORY}/${COMPONENT}:${TAG}))
 
 	@echo "::group::${FILE} -> ${IMAGE}"
@@ -76,7 +77,7 @@ endif
 		wkg oci push \
 			--annotation "org.opencontainers.image.title=${COMPONENT}" \
 			--annotation "org.opencontainers.image.description=${DESCRIPTION}" \
-			--annotation "org.opencontainers.image.version=${VERSION}" \
+			--annotation "org.opencontainers.image.version=${COMPONENT_VERSION}" \
 			--annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}.git" \
 			--annotation "org.opencontainers.image.revision=${REVISION}" \
 			--annotation "org.opencontainers.image.licenses=Apache-2.0" \
