@@ -4,16 +4,15 @@ use crate::bindings::exports::componentized::http::latch::{Decision, ErrorCode, 
 
 pub fn authorize(
     operation: Operation,
-    authorizers: Vec<fn(&Operation<'_>) -> Result<Option<Decision>, ErrorCode>>,
-) -> Result<Option<Decision>, ErrorCode> {
+    authorizers: Vec<fn(&Operation<'_>) -> Result<Decision, ErrorCode>>,
+) -> Result<Decision, ErrorCode> {
     for authorize in authorizers {
         match authorize(&operation)? {
-            None => {}
-            Some(Decision::Granted) => return Ok(Some(Decision::Granted)),
-            Some(Decision::Denied(error_code)) => return Ok(Some(Decision::Denied(error_code))),
+            Decision::Abstained => {}
+            Decision::Denied(error_code) => return Ok(Decision::Denied(error_code)),
         }
     }
-    Ok(None)
+    Ok(Decision::Abstained)
 }
 
 pub mod bindings {

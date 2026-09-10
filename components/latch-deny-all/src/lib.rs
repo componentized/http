@@ -7,8 +7,8 @@ use crate::exports::componentized::http::latch::{
 struct DenyAllLatch {}
 
 impl Latch for DenyAllLatch {
-    fn authorize(_: Operation) -> Result<Option<Decision>, ErrorCode> {
-        Ok(Some(Decision::Denied(HttpErrorCode::HttpRequestDenied)))
+    fn authorize(_: Operation) -> Result<Decision, ErrorCode> {
+        Ok(Decision::Denied(HttpErrorCode::HttpRequestDenied))
     }
 }
 

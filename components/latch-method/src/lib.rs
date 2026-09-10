@@ -9,14 +9,13 @@ use crate::{
 };
 
 const ABSTAINED: &str = "abstained";
-const GRANTED: &str = "granted";
 const DENIED: &str = "denied";
 const WILDCARD: &str = "*";
 
 struct MethodLatch {}
 
 impl MethodLatch {
-    fn authorize_method(method: Method) -> Result<Option<Decision>, ErrorCode> {
+    fn authorize_method(method: Method) -> Result<Decision, ErrorCode> {
         let method = match method {
             Method::Get => "get",
             Method::Head => "head",
@@ -34,27 +33,24 @@ impl MethodLatch {
             Some(method_value) => Self::parse_decision(method_value),
             None => match config::get(WILDCARD)? {
                 Some(default_value) => Self::parse_decision(default_value),
-                None => Ok(None),
+                None => Ok(Decision::Abstained),
             },
         }
     }
 
-    fn parse_decision(value: String) -> Result<Option<Decision>, ErrorCode> {
+    fn parse_decision(value: String) -> Result<Decision, ErrorCode> {
         match value.as_str() {
-            "" | ABSTAINED => Ok(None),
-            GRANTED => Ok(Some(Decision::Granted)),
-            DENIED => Ok(Some(Decision::Denied(
-                HttpErrorCode::HttpRequestMethodInvalid,
-            ))),
+            "" | ABSTAINED => Ok(Decision::Abstained),
+            DENIED => Ok(Decision::Denied(HttpErrorCode::HttpRequestMethodInvalid)),
             val => Err(ErrorCode::Other(Some(format!(
-                "unknown decision value '{val}', expected one of: '{ABSTAINED}', '{GRANTED}', '{DENIED}'"
+                "unknown decision value '{val}', expected one of: '{ABSTAINED}', '{DENIED}'"
             )))),
         }
     }
 }
 
 impl Latch for MethodLatch {
-    fn authorize(op: Operation) -> Result<Option<Decision>, ErrorCode> {
+    fn authorize(op: Operation) -> Result<Decision, ErrorCode> {
         match op {
             Operation::Client(client_operation) => match client_operation {
                 ClientOperation::Send(args) => Self::authorize_method(args.request.get_method()),

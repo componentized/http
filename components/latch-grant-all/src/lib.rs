@@ -5,8 +5,8 @@ use crate::exports::componentized::http::latch::{Decision, ErrorCode, Guest as L
 struct GrantAllLatch {}
 
 impl Latch for GrantAllLatch {
-    fn authorize(_: Operation) -> Result<Option<Decision>, ErrorCode> {
-        Ok(Some(Decision::Granted))
+    fn authorize(_: Operation) -> Result<Decision, ErrorCode> {
+        Ok(Decision::Abstained)
     }
 }
 

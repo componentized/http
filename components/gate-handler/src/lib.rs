@@ -4,7 +4,9 @@ use std::fmt::Display;
 
 use crate::{
     componentized::http::latch::{
-        self, authorize, Decision::Denied, HandleArgs, HandlerOperation, Operation,
+        self, authorize,
+        Decision::{Abstained, Denied},
+        HandleArgs, HandlerOperation, Operation,
     },
     exports::wasi::http::handler::{ErrorCode, Guest, Request, Response},
     wasi::{
@@ -32,7 +34,7 @@ impl Guest for GatedHttpHandler {
         match authorize(&Operation::Handler(HandlerOperation::Handle(HandleArgs {
             request: &request,
         })))? {
-            Some(Denied(reason)) => {
+            Denied(reason) => {
                 warn!(
                     "Denied REASON={reason} OPERATION=wasi:http/handler#handle METHOD={} PATH={}",
                     request.get_method(),
@@ -40,7 +42,7 @@ impl Guest for GatedHttpHandler {
                 );
                 Err(reason)
             }
-            _ => handler::handle(request).await,
+            Abstained => handler::handle(request).await,
         }
     }
 }

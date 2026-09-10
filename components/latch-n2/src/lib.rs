@@ -9,7 +9,7 @@ struct LatchN2 {}
 
 impl Latch for LatchN2 {
     #[allow(async_fn_in_trait)]
-    fn authorize(operation: Operation<'_>) -> Result<Option<Decision>, ErrorCode> {
+    fn authorize(operation: Operation<'_>) -> Result<Decision, ErrorCode> {
         let authorizers = vec![latch0::authorize, latch1::authorize];
         latch_n::authorize(operation, authorizers)
     }
