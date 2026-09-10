@@ -2,9 +2,9 @@
 
 use crate::exports::componentized::http::latch::{Decision, ErrorCode, Guest as Latch, Operation};
 
-struct GrantAllLatch {}
+struct AbstainAllLatch {}
 
-impl Latch for GrantAllLatch {
+impl Latch for AbstainAllLatch {
     fn authorize(_: Operation) -> Result<Decision, ErrorCode> {
         Ok(Decision::Abstained)
     }
@@ -17,4 +17,4 @@ wit_bindgen::generate!({
     generate_all
 });
 
-export!(GrantAllLatch);
+export!(AbstainAllLatch);
