@@ -1,3 +1,11 @@
+package componentized:http@0.1.0-dev;
+
 world imports {
     import client;
+    import latch;
+}
+
+world http-latch {
+    import wasi:config/store@0.2.0-rc.1;
+    export latch;
 }

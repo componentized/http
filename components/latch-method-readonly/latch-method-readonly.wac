@@ -1,0 +1,6 @@
+package componentized:http;
+
+export new local:latch-method{ 
+    store: new local:latch-method-readonly-config{}.store,
+    ...
+}...;

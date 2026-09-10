@@ -12,6 +12,15 @@ version = "0.3.0"
 digest = "sha256:59e1f4079e64ada450e19ffc9d08854c904e356ed8cc1fda36ff4fe150264db2"
 
 [[packages]]
+name = "wasi:config"
+registry = "wasi.dev"
+
+[[packages.versions]]
+requirement = "=0.2.0-rc.1"
+version = "0.2.0-rc.1"
+digest = "sha256:1b7f1b0fd07bb4cede16c6a6ec8852815dfb924639a78735fc7bdffdc164485d"
+
+[[packages]]
 name = "wasi:http"
 registry = "wasi.dev"
 
@@ -24,3 +33,12 @@ digest = "sha256:92cd8f3730c00226dc15626a2e7b21834dd187fc221f09818720d228585bbbf
 requirement = "=0.3.1"
 version = "0.3.1"
 digest = "sha256:fac6e40c9b8101cb0a32c76ae63271ffb7c9a66007214d57f3ae8048844d2b5f"
+
+[[packages]]
+name = "wasi:logging"
+registry = "wasi.dev"
+
+[[packages.versions]]
+requirement = "=0.1.0-draft"
+version = "0.1.0-draft"
+digest = "sha256:09621a45b12b0a9cddc798517f778aac0e5ae4bd234077b3d70758d6cf625580"

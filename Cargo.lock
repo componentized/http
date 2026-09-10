@@ -108,6 +108,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "gate-client"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
+name = "gate-handler"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -256,6 +270,62 @@ name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+
+[[package]]
+name = "latch-abstain-all"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
+name = "latch-deny-all"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
+name = "latch-method"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
+name = "latch-n"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
+name = "latch-n2"
+version = "0.1.0"
+dependencies = [
+ "latch-n",
+]
+
+[[package]]
+name = "latch-n3"
+version = "0.1.0"
+dependencies = [
+ "latch-n",
+]
+
+[[package]]
+name = "latch-n4"
+version = "0.1.0"
+dependencies = [
+ "latch-n",
+]
+
+[[package]]
+name = "latch-n5"
+version = "0.1.0"
+dependencies = [
+ "latch-n",
+]
 
 [[package]]
 name = "leb128fmt"
