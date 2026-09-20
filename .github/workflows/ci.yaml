@@ -77,7 +77,7 @@ jobs:
         run: tar -xvf components.tar -C lib
       - name: Get interface version
         id: interface_version
-        run: echo "VERSION=$( wasm-tools component wit lib/interface.wasm --json | jq -r '.packages[0].name' | cut -d'@' -f2 )" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$( wasm-tools component wit lib/interface.wasm --json | jq -r '[.packages[] | select(.name | contains("${GITHUB_REPOSITORY/\//:}@"))][0].name' | cut -d'@' -f2 )" >> $GITHUB_OUTPUT
       - name: Get tag version
         if: startsWith(github.ref, 'refs/tags/')
         id: tag_version
