@@ -16,6 +16,7 @@ A collection of utility components that remix wasi:http types and interfaces.
 ## Components
 
 - [`client`](./components/client/)
+- [`status-codes`](./components/status-codes/)
 - [`trace`](./components/trace/)
 - [`trace-client`](./components/trace-client/)
 - [`trace-handler`](./components/trace-handler/)

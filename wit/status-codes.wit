@@ -1,0 +1,314 @@
+/// HTTP status codes from the IANA HTTP Status Code Registry,
+/// https://www.iana.org/assignments/http-status-codes/
+/// @since(version = 0.1.0-dev)
+interface status-codes {
+    /// 100 Continue
+    /// [RFC9110, Section 15.2.1]
+    /// @value 100
+    continue: func() -> u16;
+
+    /// 101 Switching Protocols
+    /// [RFC9110, Section 15.2.2]
+    /// @value 101
+    switching-protocols: func() -> u16;
+
+    /// 102 Processing
+    /// [RFC2518]
+    /// @value 102
+    processing: func() -> u16;
+
+    /// 103 Early Hints
+    /// [RFC8297]
+    /// @value 103
+    early-hints: func() -> u16;
+
+    /// 200 OK
+    /// [RFC9110, Section 15.3.1]
+    /// @value 200
+    ok: func() -> u16;
+
+    /// 201 Created
+    /// [RFC9110, Section 15.3.2]
+    /// @value 201
+    created: func() -> u16;
+
+    /// 202 Accepted
+    /// [RFC9110, Section 15.3.3]
+    /// @value 202
+    accepted: func() -> u16;
+
+    /// 203 Non-Authoritative Information
+    /// [RFC9110, Section 15.3.4]
+    /// @value 203
+    non-authoritative-information: func() -> u16;
+
+    /// 204 No Content
+    /// [RFC9110, Section 15.3.5]
+    /// @value 204
+    no-content: func() -> u16;
+
+    /// 205 Reset Content
+    /// [RFC9110, Section 15.3.6]
+    /// @value 205
+    reset-content: func() -> u16;
+
+    /// 206 Partial Content
+    /// [RFC9110, Section 15.3.7]
+    /// @value 206
+    partial-content: func() -> u16;
+
+    /// 207 Multi-Status
+    /// [RFC4918]
+    /// @value 207
+    multi-status: func() -> u16;
+
+    /// 208 Already Reported
+    /// [RFC5842]
+    /// @value 208
+    already-reported: func() -> u16;
+
+    /// 226 IM Used
+    /// [RFC3229]
+    /// @value 226
+    im-used: func() -> u16;
+
+    /// 300 Multiple Choices
+    /// [RFC9110, Section 15.4.1]
+    /// @value 300
+    multiple-choices: func() -> u16;
+
+    /// 301 Moved Permanently
+    /// [RFC9110, Section 15.4.2]
+    /// @value 301
+    moved-permanently: func() -> u16;
+
+    /// 302 Found
+    /// [RFC9110, Section 15.4.3]
+    /// @value 302
+    found: func() -> u16;
+
+    /// 303 See Other
+    /// [RFC9110, Section 15.4.4]
+    /// @value 303
+    see-other: func() -> u16;
+
+    /// 304 Not Modified
+    /// [RFC9110, Section 15.4.5]
+    /// @value 304
+    not-modified: func() -> u16;
+
+    /// 305 Use Proxy
+    /// [RFC9110, Section 15.4.6]
+    /// @value 305
+    use-proxy: func() -> u16;
+
+    /// 307 Temporary Redirect
+    /// [RFC9110, Section 15.4.8]
+    /// @value 307
+    temporary-redirect: func() -> u16;
+
+    /// 308 Permanent Redirect
+    /// [RFC9110, Section 15.4.9]
+    /// @value 308
+    permanent-redirect: func() -> u16;
+
+    /// 400 Bad Request
+    /// [RFC9110, Section 15.5.1]
+    /// @value 400
+    bad-request: func() -> u16;
+
+    /// 401 Unauthorized
+    /// [RFC9110, Section 15.5.2]
+    /// @value 401
+    unauthorized: func() -> u16;
+
+    /// 402 Payment Required
+    /// [RFC9110, Section 15.5.3]
+    /// @value 402
+    payment-required: func() -> u16;
+
+    /// 403 Forbidden
+    /// [RFC9110, Section 15.5.4]
+    /// @value 403
+    forbidden: func() -> u16;
+
+    /// 404 Not Found
+    /// [RFC9110, Section 15.5.5]
+    /// @value 404
+    not-found: func() -> u16;
+
+    /// 405 Method Not Allowed
+    /// [RFC9110, Section 15.5.6]
+    /// @value 405
+    method-not-allowed: func() -> u16;
+
+    /// 406 Not Acceptable
+    /// [RFC9110, Section 15.5.7]
+    /// @value 406
+    not-acceptable: func() -> u16;
+
+    /// 407 Proxy Authentication Required
+    /// [RFC9110, Section 15.5.8]
+    /// @value 407
+    proxy-authentication-required: func() -> u16;
+
+    /// 408 Request Timeout
+    /// [RFC9110, Section 15.5.9]
+    /// @value 408
+    request-timeout: func() -> u16;
+
+    /// 409 Conflict
+    /// [RFC9110, Section 15.5.10]
+    /// @value 409
+    conflict: func() -> u16;
+
+    /// 410 Gone
+    /// [RFC9110, Section 15.5.11]
+    /// @value 410
+    gone: func() -> u16;
+
+    /// 411 Length Required
+    /// [RFC9110, Section 15.5.12]
+    /// @value 411
+    length-required: func() -> u16;
+
+    /// 412 Precondition Failed
+    /// [RFC9110, Section 15.5.13]
+    /// @value 412
+    precondition-failed: func() -> u16;
+
+    /// 413 Content Too Large
+    /// [RFC9110, Section 15.5.14]
+    /// @value 413
+    content-too-large: func() -> u16;
+
+    /// 414 URI Too Long
+    /// [RFC9110, Section 15.5.15]
+    /// @value 414
+    uri-too-long: func() -> u16;
+
+    /// 415 Unsupported Media Type
+    /// [RFC9110, Section 15.5.16]
+    /// @value 415
+    unsupported-media-type: func() -> u16;
+
+    /// 416 Range Not Satisfiable
+    /// [RFC9110, Section 15.5.17]
+    /// @value 416
+    range-not-satisfiable: func() -> u16;
+
+    /// 417 Expectation Failed
+    /// [RFC9110, Section 15.5.18]
+    /// @value 417
+    expectation-failed: func() -> u16;
+
+    /// 418 I'm a teapot, unused by HTTP and reserved so it isn't assigned
+    /// [RFC2324], [RFC9110, Section 15.5.19]
+    /// @value 418
+    im-a-teapot: func() -> u16;
+
+    /// 421 Misdirected Request
+    /// [RFC9110, Section 15.5.20]
+    /// @value 421
+    misdirected-request: func() -> u16;
+
+    /// 422 Unprocessable Content
+    /// [RFC9110, Section 15.5.21]
+    /// @value 422
+    unprocessable-content: func() -> u16;
+
+    /// 423 Locked
+    /// [RFC4918]
+    /// @value 423
+    locked: func() -> u16;
+
+    /// 424 Failed Dependency
+    /// [RFC4918]
+    /// @value 424
+    failed-dependency: func() -> u16;
+
+    /// 425 Too Early
+    /// [RFC8470]
+    /// @value 425
+    too-early: func() -> u16;
+
+    /// 426 Upgrade Required
+    /// [RFC9110, Section 15.5.22]
+    /// @value 426
+    upgrade-required: func() -> u16;
+
+    /// 428 Precondition Required
+    /// [RFC6585]
+    /// @value 428
+    precondition-required: func() -> u16;
+
+    /// 429 Too Many Requests
+    /// [RFC6585]
+    /// @value 429
+    too-many-requests: func() -> u16;
+
+    /// 431 Request Header Fields Too Large
+    /// [RFC6585]
+    /// @value 431
+    request-header-fields-too-large: func() -> u16;
+
+    /// 451 Unavailable For Legal Reasons
+    /// [RFC7725]
+    /// @value 451
+    unavailable-for-legal-reasons: func() -> u16;
+
+    /// 500 Internal Server Error
+    /// [RFC9110, Section 15.6.1]
+    /// @value 500
+    internal-server-error: func() -> u16;
+
+    /// 501 Not Implemented
+    /// [RFC9110, Section 15.6.2]
+    /// @value 501
+    not-implemented: func() -> u16;
+
+    /// 502 Bad Gateway
+    /// [RFC9110, Section 15.6.3]
+    /// @value 502
+    bad-gateway: func() -> u16;
+
+    /// 503 Service Unavailable
+    /// [RFC9110, Section 15.6.4]
+    /// @value 503
+    service-unavailable: func() -> u16;
+
+    /// 504 Gateway Timeout
+    /// [RFC9110, Section 15.6.5]
+    /// @value 504
+    gateway-timeout: func() -> u16;
+
+    /// 505 HTTP Version Not Supported
+    /// [RFC9110, Section 15.6.6]
+    /// @value 505
+    http-version-not-supported: func() -> u16;
+
+    /// 506 Variant Also Negotiates
+    /// [RFC2295]
+    /// @value 506
+    variant-also-negotiates: func() -> u16;
+
+    /// 507 Insufficient Storage
+    /// [RFC4918]
+    /// @value 507
+    insufficient-storage: func() -> u16;
+
+    /// 508 Loop Detected
+    /// [RFC5842]
+    /// @value 508
+    loop-detected: func() -> u16;
+
+    /// 510 Not Extended, obsoleted
+    /// [RFC2774], [Status change of HTTP experiments to Historic]
+    /// @value 510
+    not-extended: func() -> u16;
+
+    /// 511 Network Authentication Required
+    /// [RFC6585]
+    /// @value 511
+    network-authentication-required: func() -> u16;
+}
