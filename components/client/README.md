@@ -1,4 +1,4 @@
-# `http-client`
+# `client`
 
 A higher-level HTTP client that delegates to wasi:http/client.
 
@@ -17,7 +17,7 @@ A higher-level HTTP client that delegates to wasi:http/client.
 - `trace(url, headers, options)`
 - `query(url, headers, body, options)`
 
-## The `http-client` World
+## The `client` World
 
 - exports `componentized:http/client`
 - imports `wasi:http/client@0.3.1`

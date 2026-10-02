@@ -2,7 +2,7 @@ use url::Url;
 
 wit_bindgen::generate!({
     path: "../wit",
-    world: "http-client",
+    world: "client",
     generate_all,
 });
 
