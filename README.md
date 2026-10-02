@@ -27,7 +27,7 @@ make components
 
 ### Components
 
-- [`http-client`](./components/http-client/)
+- [`client`](./components/client/)
 
 ## Community
 
