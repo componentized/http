@@ -10,3 +10,8 @@ crate-type = ["cdylib"]
 [dependencies]
 url = "2.5"
 wit-bindgen = { workspace = true, features = ["async-spawn"] }
+
+[dev-dependencies]
+test-harness = { workspace = true }
+tokio = { workspace = true }
+wasmtime = { workspace = true }
