@@ -139,7 +139,10 @@ dependencies = [
 name = "client"
 version = "0.1.0"
 dependencies = [
+ "test-harness",
+ "tokio",
  "url",
+ "wasmtime",
  "wit-bindgen",
 ]
 

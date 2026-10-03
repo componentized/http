@@ -59,7 +59,9 @@ pub mod bindings {
 }
 
 pub use bindings::exports::componentized::http::client::{
-    ErrorCode as HttpClientErrorCode, Method as HttpClientMethod,
+    ErrorCode as HttpClientErrorCode, HttpResponse as HttpClientResponse,
+    Method as HttpClientMethod, RedirectRequest as HttpClientRedirectRequest,
+    RequestOptions as HttpClientRequestOptions,
 };
 pub use bindings::exports::wasi::http::types::{ErrorCode, Method, Scheme};
 pub use bindings::wasi::logging::logging::Level;
@@ -110,6 +112,14 @@ pub fn ready<T: Lower + Lift + Send + Sync + 'static>(
     value: T,
 ) -> Result<FutureReader<T>> {
     accessor.with(|store| FutureReader::new(store, async move { Ok::<_, wasmtime::Error>(value) }))
+}
+
+/// A stream for the guest that yields the items, then closes.
+pub fn stream<T: Lower + Lift + Unpin + Send + Sync + 'static>(
+    accessor: &Accessor<Ctx>,
+    items: Vec<T>,
+) -> Result<StreamReader<T>> {
+    accessor.with(|store| StreamReader::new(store, items))
 }
 
 /// Read every item written to a guest stream, until it closes.
@@ -293,11 +303,70 @@ pub struct SentRequest {
     pub uri: String,
 }
 
+/// A request the test subject sent upstream, with its headers and body.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UpstreamRequest {
+    pub method: String,
+    pub uri: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+impl UpstreamRequest {
+    /// The values of the named header, ignoring case.
+    pub fn header(&self, name: &str) -> Vec<&str> {
+        self.headers
+            .iter()
+            .filter(|(n, _)| n.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.as_str())
+            .collect()
+    }
+
+    /// The path and query of the request URI.
+    pub fn path(&self) -> &str {
+        self.uri
+            .parse::<http::Uri>()
+            .ok()
+            .and_then(|uri| uri.path_and_query().map(|p| p.as_str().len()))
+            .map(|len| &self.uri[self.uri.len() - len..])
+            .unwrap_or(&self.uri)
+    }
+}
+
+/// The response upstream sends for a request, the body is empty.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UpstreamResponse {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+}
+
+impl Default for UpstreamResponse {
+    /// [`UPSTREAM_STATUS`] with [`UPSTREAM_HEADER`].
+    fn default() -> Self {
+        Self {
+            status: UPSTREAM_STATUS,
+            headers: vec![(UPSTREAM_HEADER.0.to_string(), UPSTREAM_HEADER.1.to_string())],
+        }
+    }
+}
+
+impl UpstreamResponse {
+    /// A redirect to the location.
+    pub fn redirect(status: u16, location: &str) -> Self {
+        Self {
+            status,
+            headers: vec![("location".to_string(), location.to_string())],
+        }
+    }
+}
+
+type Responder = dyn FnMut(&UpstreamRequest) -> UpstreamResponse + Send;
+
 /// Observations recorded while the test subject runs.
 #[derive(Clone, Default)]
 pub struct Recorder {
     logs: Arc<Mutex<Vec<LogEntry>>>,
-    requests: Arc<Mutex<Vec<SentRequest>>>,
+    requests: Arc<Mutex<Vec<UpstreamRequest>>>,
 }
 
 impl Recorder {
@@ -331,13 +400,25 @@ impl Recorder {
 
     /// Requests the test subject sent upstream, in order.
     pub fn requests(&self) -> Vec<SentRequest> {
+        self.upstream_requests()
+            .into_iter()
+            .map(|request| SentRequest {
+                method: request.method,
+                uri: request.uri,
+            })
+            .collect()
+    }
+
+    /// Requests the test subject sent upstream, in order, with their headers and body.
+    pub fn upstream_requests(&self) -> Vec<UpstreamRequest> {
         self.requests.lock().unwrap().clone()
     }
 }
 
-/// Answers requests sent upstream with a canned response, instead of the network.
+/// Answers requests sent upstream instead of the network, by default with a canned response.
 struct Upstream {
     recorder: Recorder,
+    responder: Arc<Mutex<Box<Responder>>>,
 }
 
 impl WasiHttpHooks for Upstream {
@@ -357,21 +438,39 @@ impl WasiHttpHooks for Upstream {
                 >,
             > + Send,
     > {
-        self.recorder.requests.lock().unwrap().push(SentRequest {
-            method: request.method().to_string(),
-            uri: request.uri().to_string(),
-        });
+        let recorder = self.recorder.clone();
+        let responder = self.responder.clone();
         Box::new(async move {
+            let (parts, body) = request.into_parts();
+            let body = body.collect().await?.to_bytes().to_vec();
+            let request = UpstreamRequest {
+                method: parts.method.to_string(),
+                uri: parts.uri.to_string(),
+                headers: parts
+                    .headers
+                    .iter()
+                    .map(|(name, value)| {
+                        (
+                            name.to_string(),
+                            String::from_utf8_lossy(value.as_bytes()).into_owned(),
+                        )
+                    })
+                    .collect(),
+                body,
+            };
+            let upstream = (responder.lock().unwrap())(&request);
+            recorder.requests.lock().unwrap().push(request);
+
             // the body is passed through the test subject to the harness host to host, which the
             // harness can't read, see `resolve`
             let body = Empty::<Bytes>::new()
                 .map_err(|never| match never {})
                 .boxed_unsync();
-            let response = http::Response::builder()
-                .status(UPSTREAM_STATUS)
-                .header(UPSTREAM_HEADER.0, UPSTREAM_HEADER.1)
-                .body(body)
-                .expect("canned response");
+            let mut response = http::Response::builder().status(upstream.status);
+            for (name, value) in &upstream.headers {
+                response = response.header(name, value);
+            }
+            let response = response.body(body).expect("upstream response");
             let io = Box::new(async { Ok(()) })
                 as Box<dyn Future<Output = Result<(), wasmtime_wasi_http::Error>> + Send>;
             Ok((response, io))
@@ -440,9 +539,12 @@ impl UpstreamClient {
                 .requests
                 .lock()
                 .unwrap()
-                .push(SentRequest {
+                .push(UpstreamRequest {
                     method: method.to_string(),
                     uri: url,
+                    // not read, the body stream is closed
+                    headers: vec![],
+                    body: vec![],
                 });
             if let Some(mut body) = body {
                 body.close(&mut store)
@@ -603,6 +705,7 @@ fn add_handler_to_linker(linker: &mut Linker<Ctx>) -> Result<()> {
 /// Builds a subject instance for a test.
 pub struct Harness {
     subject: String,
+    responder: Box<Responder>,
 }
 
 impl Harness {
@@ -610,7 +713,18 @@ impl Harness {
     pub fn new(component_name: &str) -> Self {
         Self {
             subject: component_name.to_string(),
+            responder: Box::new(|_| UpstreamResponse::default()),
         }
+    }
+
+    /// Answer the requests sent upstream with `wasi:http` with the responses, instead of the
+    /// default [`UpstreamResponse`].
+    pub fn upstream(
+        mut self,
+        responder: impl FnMut(&UpstreamRequest) -> UpstreamResponse + Send + 'static,
+    ) -> Self {
+        self.responder = Box::new(responder);
+        self
     }
 
     /// Instantiate the test subject.
@@ -639,6 +753,7 @@ impl Harness {
                 http: WasiHttpCtx::new(),
                 upstream: Upstream {
                     recorder: recorder.clone(),
+                    responder: Arc::new(Mutex::new(self.responder)),
                 },
                 table: ResourceTable::new(),
                 recorder: recorder.clone(),
