@@ -2,8 +2,8 @@
 
 A collection of utility components that remix wasi:http types and interfaces.
 
+- [Components](#components)
 - [Build](#build)
-  - [Components](#components)
 - [Community](#community)
   - [Code of Conduct](#code-of-conduct)
   - [Communication](#communication)
@@ -11,6 +11,10 @@ A collection of utility components that remix wasi:http types and interfaces.
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
 
+
+## Components
+
+- [`client`](./components/client/)
 
 ## Build
 
@@ -25,9 +29,17 @@ Prereqs:
 make components
 ```
 
-### Components
+The build creates each component in [`components`](./components) into `target/components`, e.g. the client at `target/components/client/client.wasm`, along with `target/components/interface.wasm`, the `componentized:http` WIT package. Each component is also built with debug info, e.g. `target/components/client/client.debug.wasm`.
 
-- [`client`](./components/client/)
+```sh
+make test
+```
+
+The WIT dependencies in each `wit/deps` directory are fetched rather than committed, pinned by the `wkg.lock` files. The make targets fetch them as needed. To fetch or update them directly, e.g. before building the Rust components with `cargo`, whose bindings are generated from the WIT:
+
+```sh
+make wit
+```
 
 ## Community
 
