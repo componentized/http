@@ -1,0 +1,23 @@
+[package]
+name = "trace-client"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+# shared with the other trace components
+path = "../../crates/trace/src/lib.rs"
+
+[features]
+default = ["client"]
+client = []
+handler = []
+
+[dependencies]
+wit-bindgen = { workspace = true, features = ["async-spawn"] }
+
+[dev-dependencies]
+test-harness = { workspace = true }
+tokio = { workspace = true }
+wasmtime = { workspace = true }
