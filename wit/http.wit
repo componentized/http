@@ -1,6 +1,7 @@
-package componentized:http@0.1.0-dev;
-
+@since(version = 0.1.0-dev)
 interface client {
+
+    @since(version = 0.1.0-dev)
     enum method {
         get,
         post,
@@ -13,11 +14,13 @@ interface client {
         query,
     }
 
+    @since(version = 0.1.0-dev)
     variant error-code {
         other(option<string>),
     }
 
     /// Per-request options. None fields fall through to host defaults.
+    @since(version = 0.1.0-dev)
     record request-options {
         connect-timeout-ms: option<u32>,
         first-byte-timeout-ms: option<u32>,
@@ -27,6 +30,7 @@ interface client {
     /// A streaming HTTP response. The status and headers are available
     /// immediately; the body streams as `body`, and trailers (if any) resolve
     /// via `trailers` once the body stream is fully consumed.
+    @since(version = 0.1.0-dev)
     record http-response {
         status: u16,
         headers: list<tuple<string, string>>,
@@ -36,32 +40,42 @@ interface client {
 
     /// Send an HTTP request with an explicit method. Both the request body and
     /// the response body stream.
+    @since(version = 0.1.0-dev)
     request: async func(method: method, url: string, headers: list<tuple<string, string>>, body: option<stream<u8>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP GET request.
+    @since(version = 0.1.0-dev)
     get: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP POST request.
+    @since(version = 0.1.0-dev)
     post: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP PUT request.
+    @since(version = 0.1.0-dev)
     put: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP DELETE request.
+    @since(version = 0.1.0-dev)
     delete: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP PATCH request.
+    @since(version = 0.1.0-dev)
     patch: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP HEAD request.
+    @since(version = 0.1.0-dev)
     head: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP OPTIONS request.
+    @since(version = 0.1.0-dev)
     options: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP TRACE request.
+    @since(version = 0.1.0-dev)
     trace: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP QUERY request.
+    @since(version = 0.1.0-dev)
     query: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 }
