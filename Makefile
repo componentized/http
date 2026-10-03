@@ -1,9 +1,5 @@
 SHELL := /bin/bash
 
-# prefer paths are relative to the root of the repository, where make runs, to keep the logs readable
-
-WKG_CONFIG := .config/wasm-pkg/config.toml
-
 export RUST_BACKTRACE ?= 1
 export WASMTIME_BACKTRACE_DETAILS ?= 1
 
@@ -15,8 +11,14 @@ export PATH := $(abspath $(TOOLS_DIR))/bin:$(PATH)
 # cargo binstall downloads prebuilt binaries, without it the tools are built with cargo install
 CARGO_INSTALL := $(if $(shell command -v cargo-binstall 2> /dev/null),cargo binstall --no-confirm --disable-telemetry,cargo install)
 
-COMPONENTS = $(sort $(notdir $(patsubst %/,%,$(dir $(wildcard $(addprefix components/*/,*.properties *.wac *.wkg Cargo.toml))))))
-TOOLS := static-config wac-cli wasm-tools wkg
+COMPONENTS = $(sort $(foreach file,$(wildcard $(addprefix components/*/,wit/*.constants.wit *.properties *.wac *.wkg Cargo.toml)),$(word 2,$(subst /, ,$(file)))))
+TOOLS := componentized-constants-cli static-config wac-cli wasm-tools wkg
+
+export WKG_CONFIG_FILE := $(abspath .config/wasm-pkg/config.toml)
+
+# a path relative to the root of the repository, e.g. `wit` for `components/../wit`
+relpath = $(if $(filter $(CURDIR),$(abspath $(1))),.,$(patsubst $(CURDIR)/%,%,$(abspath $(1))))
+
 
 .PHONY: all
 all: components
@@ -31,7 +33,7 @@ clean-components: clean-wit
 
 .PHONY: clean-wit ## Remove the fetched wit dependencies, fetched again by `make wit`
 clean-wit:
-	rm -rf wit/deps components/wit/deps components/*/wit/deps
+	rm -rf $(WIT_DEPS)
 
 .PHONY: test
 test: components
@@ -68,7 +70,15 @@ define BUILD_COMPONENT
 .PHONY: components/$1
 components/$1: ${COMPONENTS_DIR}/$1/$1.wasm ${COMPONENTS_DIR}/$1/$1.debug.wasm
 
-ifneq ($(wildcard components/$1/$1.properties),)
+ifneq ($(wildcard components/$1/wit/$1.constants.wit),)
+
+${COMPONENTS_DIR}/$1/$1.wasm: components/$1/wit/deps ${COMPONENTS_DIR}/$1/README.md | $(call tool,componentized-constants-cli)
+	constants --wit components/$1/wit -o ${COMPONENTS_DIR}/$1/$1.wasm
+
+${COMPONENTS_DIR}/$1/$1.debug.wasm: components/$1/wit/deps ${COMPONENTS_DIR}/$1/README.md | $(call tool,componentized-constants-cli)
+	constants --wit components/$1/wit -o ${COMPONENTS_DIR}/$1/$1.debug.wasm
+
+else ifneq ($(wildcard components/$1/$1.properties),)
 
 ${COMPONENTS_DIR}/$1/$1.wasm: components/$1/$1.properties ${COMPONENTS_DIR}/$1/README.md | $(call tool,static-config)
 	static-config -f components/$1/$1.properties -o ${COMPONENTS_DIR}/$1/$1.wasm
@@ -121,14 +131,27 @@ ${COMPONENTS_DIR}/interface.wasm: wit/deps README.md | $(call tool,wkg)
 	wkg build -o ${COMPONENTS_DIR}/interface.wasm
 	@cp README.md ${COMPONENTS_DIR}/README.md
 
+# directories with a wkg.toml, each fetches the dependencies of its wit directory into wit/deps,
+# e.g. `.` and `components`
+WKG_DIRS := $(sort $(patsubst ./%,%,$(patsubst %/,%,$(dir $(shell find . -name wkg.toml -not -path './target/*' -not -path '*/deps/*')))))
+
+# the wit/deps directory of a directory with a wkg.toml, e.g. `wit/deps` for `.`
+wit_deps = $(patsubst ./%,%,$(1)/wit/deps)
+
+WIT_DEPS := $(foreach dir,$(WKG_DIRS),$(call wit_deps,$(dir)))
+
 .PHONY: wit
-wit: wit/deps components/wit/deps
+wit: $(WIT_DEPS)
 
-wit/deps: wkg.toml $(shell find wit -type f -name "*.wit" -not -path "deps") | $(call tool,wkg)
-	wkg fetch --config $(WKG_CONFIG)
+define FETCH_WIT
 
-components/wit/deps: wit/deps components/wkg.toml $(shell find components/wit -type f -name "*.wit" -not -path "deps") | $(call tool,wkg)
-	( cd components && wkg fetch --config ../$(WKG_CONFIG) )
+# a package overridden with a local path, e.g. `{ path = "../wit" }`, has its dependencies fetched first
+$(call wit_deps,$1): $1/wkg.toml $(shell find $1/wit -type f -name "*.wit" -not -path "*/deps/*") $(foreach path,$(shell sed -n 's/.*path *= *"\(.*\)".*/\1/p' $1/wkg.toml),$(call relpath,$1/$(path))/deps) | $(call tool,wkg)
+	$(if $(filter .,$1),,cd $1 && )wkg fetch
+
+endef
+
+$(foreach dir,$(WKG_DIRS),$(eval $(call FETCH_WIT,$(dir))))
 
 # sign published components with cosign, `SIGN=false` to push without signing, e.g. to a local registry
 SIGN ?= true

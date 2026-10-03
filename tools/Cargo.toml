@@ -13,6 +13,7 @@ publish = false
 path = "lib.rs"
 
 [dependencies]
+componentized-constants-cli = "=0.1.0-dev"
 static-config = "=0.2.0"
 wac-cli = "=0.11.0"
 wasm-tools = "=1.259.0"
