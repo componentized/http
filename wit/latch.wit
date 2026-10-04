@@ -13,36 +13,52 @@
 interface latch {
     use wasi:http/types@0.3.0.{error-code as http-error-code, request};
 
+    /// Arguments to wasi:http/client#send.
     @since(version = 0.1.0-dev)
     record send-args {
+        /// The request to send. A latch may read it, e.g. its method, scheme, authority, path or
+        /// headers, but the request is still sent by the gate, after the latch defers.
         request: borrow<request>,
     }
 
+    /// Arguments to wasi:http/handler#handle.
     @since(version = 0.1.0-dev)
     record handle-args {
+        /// The request to handle. A latch may read it, e.g. its method, scheme, authority, path or
+        /// headers, but the request is still handled by the gate, after the latch defers.
         request: borrow<request>,
     }
 
+    /// Operations of the wasi:http/client interface.
     @since(version = 0.1.0-dev)
     variant client-operation {
+        /// Send a request, wasi:http/client#send.
         send(send-args),
     }
 
+    /// Operations of the wasi:http/handler interface.
     @since(version = 0.1.0-dev)
     variant handler-operation {
+        /// Handle a request, wasi:http/handler#handle.
         handle(handle-args),
     }
 
+    /// Operations of the wasi:http package a gate asks a latch to authorize.
     @since(version = 0.1.0-dev)
     variant operation {
+        /// A request sent with wasi:http/client.
         client(client-operation),
+        /// A request handled with wasi:http/handler.
         handler(handler-operation),
     }
 
     /// Whether the request is allowed to proceed.
     @since(version = 0.1.0-dev)
     variant decision {
+        /// The latch raises no objection, the request proceeds unless another latch denies it.
         deferred,
+        /// The request must not proceed. The gate fails it with the error code, without sending
+        /// or handling it.
         denied(http-error-code),
     }
 

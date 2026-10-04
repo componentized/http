@@ -24,6 +24,7 @@ world gate-handler {
 world latch {
     import wasi:config/store@0.2.0-rc.1;
     import wasi:logging/logging@0.1.0-draft;
+    import wasi:random/insecure@0.3.0;
     import componentized:http/latch@0.1.0-dev;
     export componentized:http/latch@0.1.0-dev;
 }
@@ -66,9 +67,4 @@ world trace-client {
 world trace {
     include trace-client;
     include trace-handler;
-}
-
-/// Insecure random numbers, e.g. to seed `latch-deny-random`.
-world insecure-random {
-    import wasi:random/insecure@0.3.0;
 }

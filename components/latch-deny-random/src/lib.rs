@@ -5,14 +5,6 @@ const LATCH_NAME: &str = "latch-deny-random";
 /// The fraction of requests denied when `probability` is not configured.
 const DEFAULT_PROBABILITY: f64 = 0.1;
 
-mod random {
-    wit_bindgen::generate!({
-        path: "../wit",
-        world: "insecure-random",
-        generate_all
-    });
-}
-
 struct Config {
     /// The fraction of requests denied, from 0 to 1.
     probability: f64,
@@ -26,7 +18,7 @@ impl Config {
     fn load() -> Result<Config, ErrorCode> {
         let config = http_latch::load_config(LATCH_NAME, |config| {
             Config::parse(config, || {
-                random::wasi::random::insecure::get_insecure_random_u64()
+                http_latch::bindings::wasi::random::insecure::get_insecure_random_u64()
             })
         })?;
         // the seed reproduces the decisions, e.g. a failure the random seed uncovered
