@@ -2,4 +2,5 @@ package componentized:http@0.1.0-dev;
 
 world imports {
     import client;
+    import latch;
 }

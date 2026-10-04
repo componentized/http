@@ -31,6 +31,41 @@ use crate::bindings::componentized::http::client as upstream_client;
 use crate::bindings::exports::componentized::http::client as http_client;
 use crate::bindings::exports::wasi::http::{client, handler, types};
 use crate::bindings::wasi::logging::logging;
+use crate::gate_bindings::exports::wasi::http as gated;
+
+mod latch;
+
+pub use latch::{Authorization, HostLatch, Observation, host_request, response_status};
+
+/// Bindings for gates, which export `wasi:http/client` and `wasi:http/handler` with the host's
+/// `wasi:http/types`, and import a latch.
+pub mod gate_bindings {
+    wasmtime::component::bindgen!({
+        path: "../../components/wit",
+        inline: "
+            package componentized:test-harness-gate;
+
+            world gate {
+                import componentized:http/latch@0.1.0-dev;
+                import wasi:config/store@0.2.0-rc.1;
+                import wasi:logging/logging@0.1.0-draft;
+                export wasi:http/client@0.3.0;
+                export wasi:http/handler@0.3.0;
+            }
+        ",
+        world: "componentized:test-harness-gate/gate",
+        exports: { default: async | store },
+        with: {
+            "wasi:http/types": wasmtime_wasi_http::p3::bindings::http::types,
+            "wasi:clocks": wasmtime_wasi::p3::bindings::clocks,
+            "wasi:logging": crate::bindings::wasi::logging,
+        },
+    });
+}
+
+pub use gate_bindings::componentized::http::latch::{
+    Decision, ErrorCode as LatchErrorCode, HttpErrorCode,
+};
 
 pub mod bindings {
     wasmtime::component::bindgen!({
@@ -247,6 +282,33 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
+    /// A warning logged by the test subject.
+    pub fn warn(context: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            level: Level::Warn,
+            context: context.into(),
+            message: message.into(),
+        }
+    }
+
+    /// An error logged by the test subject.
+    pub fn error(context: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            level: Level::Error,
+            context: context.into(),
+            message: message.into(),
+        }
+    }
+
+    /// A critical message logged by the test subject.
+    pub fn critical(context: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            level: Level::Critical,
+            context: context.into(),
+            message: message.into(),
+        }
+    }
+
     /// A trace message logged by the test subject.
     pub fn trace(context: impl Into<String>, message: impl Into<String>) -> Self {
         Self {
@@ -367,6 +429,8 @@ type Responder = dyn FnMut(&UpstreamRequest) -> UpstreamResponse + Send;
 pub struct Recorder {
     logs: Arc<Mutex<Vec<LogEntry>>>,
     requests: Arc<Mutex<Vec<UpstreamRequest>>>,
+    authorizations: Arc<Mutex<Vec<Authorization>>>,
+    observations: Arc<Mutex<Vec<Observation>>>,
 }
 
 impl Recorder {
@@ -396,6 +460,25 @@ impl Recorder {
             .filter(|handle| handle.operation.starts_with(operation_prefix))
             .map(|handle| handle.value)
             .collect()
+    }
+
+    /// Requests the host latch was asked to authorize, in order.
+    pub fn authorizations(&self) -> Vec<Authorization> {
+        self.authorizations.lock().unwrap().clone()
+    }
+
+    /// Names of the operations the host latch was asked to authorize, in order, e.g.
+    /// `client.send`.
+    pub fn operations(&self) -> Vec<String> {
+        self.authorizations()
+            .into_iter()
+            .map(|a| a.operation)
+            .collect()
+    }
+
+    /// Decisions the host latch observed, in order.
+    pub fn observations(&self) -> Vec<Observation> {
+        self.observations.lock().unwrap().clone()
     }
 
     /// Requests the test subject sent upstream, in order.
@@ -484,6 +567,8 @@ pub struct Ctx {
     upstream: Upstream,
     table: ResourceTable,
     recorder: Recorder,
+    latch: HostLatch,
+    config: Vec<(String, String)>,
 }
 
 impl WasiView for Ctx {
@@ -706,6 +791,9 @@ fn add_handler_to_linker(linker: &mut Linker<Ctx>) -> Result<()> {
 pub struct Harness {
     subject: String,
     responder: Box<Responder>,
+    latches: Vec<String>,
+    host_latch: Option<HostLatch>,
+    config: Vec<(String, String)>,
 }
 
 impl Harness {
@@ -714,7 +802,76 @@ impl Harness {
         Self {
             subject: component_name.to_string(),
             responder: Box::new(|_| UpstreamResponse::default()),
+            latches: vec![],
+            host_latch: None,
+            config: vec![],
         }
+    }
+
+    /// Install a latch component from `target/components/`.
+    ///
+    /// Without latch components the host latch is the test subject's latch. A single latch
+    /// component replaces it, unless the latch imports a latch, then it wraps the host latch.
+    /// Otherwise several latches, including the host latch when one is set with
+    /// [`Harness::host_latch`], are aggregated with the `latch-n` component of the same size,
+    /// in the order installed with the host latch last.
+    pub fn latch(mut self, name: &str) -> Self {
+        self.latches.push(name.to_string());
+        self
+    }
+
+    /// Replace the default deferring host latch, it is aggregated with any latch components.
+    pub fn host_latch(mut self, latch: HostLatch) -> Self {
+        self.host_latch = Some(latch);
+        self
+    }
+
+    /// Add a `wasi:config/store` value, visible to every component in the composition.
+    ///
+    /// Values are returned by `get-all` in the order they are added.
+    pub fn config(mut self, key: &str, value: &str) -> Self {
+        self.config.push((key.to_string(), value.to_string()));
+        self
+    }
+
+    fn compose(&self) -> Result<Vec<u8>> {
+        let mut names = vec![self.subject.as_str()];
+        names.extend(self.latches.iter().map(String::as_str));
+        for name in &names {
+            ensure_built(name)?;
+        }
+
+        let read = |name: &str| {
+            let path = component_path(name);
+            std::fs::read(&path).with_context(|| format!("failed to read {}", path.display()))
+        };
+
+        let bytes = read(&self.subject)?;
+        let latch = match self.latches.as_slice() {
+            [] => return Ok(bytes),
+            // a latch that wraps another latch wraps the host latch, its import is left for the host
+            [latch] if self.host_latch.is_none() || latch::imports_latch(&read(latch)?)? => {
+                read(latch)?
+            }
+            latches => {
+                // the host latch takes the last slot of latch-n, left unsatisfied it is imported
+                let slots = latches.len() + usize::from(self.host_latch.is_some());
+                if slots > latch::LATCH_N_MAX {
+                    bail!(
+                        "at most {} latches can be aggregated, got {slots}",
+                        latch::LATCH_N_MAX
+                    );
+                }
+                let latch_n = format!("latch-n{slots}");
+                ensure_built(&latch_n)?;
+                let latches = latches
+                    .iter()
+                    .map(|name| read(name))
+                    .collect::<Result<Vec<_>>>()?;
+                latch::aggregate(read(&latch_n)?, latches)?
+            }
+        };
+        latch::plug(&self.subject, bytes, latch)
     }
 
     /// Answer the requests sent upstream with `wasi:http` with the responses, instead of the
@@ -731,12 +888,13 @@ impl Harness {
     pub async fn build(self) -> Result<TestSubject> {
         let mut config = Config::new();
         config.wasm_component_model_async(true);
+        // named imports, e.g. `latch0` of a `latch-n` component composed with a latch
+        config.wasm_component_model_implements(true);
         let engine = Engine::new(&config)?;
 
-        ensure_built(&self.subject)?;
-        let path = component_path(&self.subject);
-        let component = Component::from_file(&engine, &path)
-            .with_context(|| format!("failed to load {}", path.display()))?;
+        let bytes = self.compose()?;
+        let component = Component::new(&engine, &bytes)
+            .with_context(|| format!("failed to load {}", self.subject))?;
 
         let mut linker = Linker::new(&engine);
         wasmtime_wasi::p3::add_to_linker(&mut linker)?;
@@ -744,6 +902,7 @@ impl Harness {
         add_handler_to_linker(&mut linker)?;
         upstream_client::add_to_linker::<_, UpstreamClient>(&mut linker, |ctx| ctx)?;
         logging::add_to_linker::<_, HasSelf<Ctx>>(&mut linker, |ctx| ctx)?;
+        latch::add_to_linker(&mut linker)?;
 
         let recorder = Recorder::default();
         let mut store = Store::new(
@@ -757,6 +916,8 @@ impl Harness {
                 },
                 table: ResourceTable::new(),
                 recorder: recorder.clone(),
+                latch: self.host_latch.unwrap_or_else(HostLatch::defer),
+                config: self.config,
             },
         );
         let instance_pre = linker.instantiate_pre(&component)?;
@@ -764,24 +925,28 @@ impl Harness {
             .instantiate_async(&mut store)
             .await
             .with_context(|| format!("failed to instantiate {}", self.subject))?;
+        // an interface is only available when its types match the bindings, e.g. the client
+        // exported by a gate takes the host's requests, a trace component takes its own
         let exports = Exports {
             name: self.subject,
-            types: match types::GuestIndices::new(&instance_pre) {
-                Ok(indices) => Some(indices.load(&mut store, &instance)?),
-                Err(_) => None,
-            },
-            client: match client::GuestIndices::new(&instance_pre) {
-                Ok(indices) => Some(indices.load(&mut store, &instance)?),
-                Err(_) => None,
-            },
-            handler: match handler::GuestIndices::new(&instance_pre) {
-                Ok(indices) => Some(indices.load(&mut store, &instance)?),
-                Err(_) => None,
-            },
-            http_client: match http_client::GuestIndices::new(&instance_pre) {
-                Ok(indices) => Some(indices.load(&mut store, &instance)?),
-                Err(_) => None,
-            },
+            types: types::GuestIndices::new(&instance_pre)
+                .ok()
+                .and_then(|indices| indices.load(&mut store, &instance).ok()),
+            client: client::GuestIndices::new(&instance_pre)
+                .ok()
+                .and_then(|indices| indices.load(&mut store, &instance).ok()),
+            handler: handler::GuestIndices::new(&instance_pre)
+                .ok()
+                .and_then(|indices| indices.load(&mut store, &instance).ok()),
+            http_client: http_client::GuestIndices::new(&instance_pre)
+                .ok()
+                .and_then(|indices| indices.load(&mut store, &instance).ok()),
+            gated_client: gated::client::GuestIndices::new(&instance_pre)
+                .ok()
+                .and_then(|indices| indices.load(&mut store, &instance).ok()),
+            gated_handler: gated::handler::GuestIndices::new(&instance_pre)
+                .ok()
+                .and_then(|indices| indices.load(&mut store, &instance).ok()),
         };
 
         Ok(TestSubject {
@@ -801,6 +966,8 @@ pub struct Exports {
     client: Option<client::Guest>,
     handler: Option<handler::Guest>,
     http_client: Option<http_client::Guest>,
+    gated_client: Option<gated::client::Guest>,
+    gated_handler: Option<gated::handler::Guest>,
 }
 
 impl Exports {
@@ -830,6 +997,22 @@ impl Exports {
         self.http_client
             .as_ref()
             .unwrap_or_else(|| panic!("{} does not export componentized:http/client", self.name))
+    }
+
+    /// The exported `wasi:http/client` of a gate, which takes requests created by the host, see
+    /// [`host_request`].
+    pub fn gated_client(&self) -> &gated::client::Guest {
+        self.gated_client
+            .as_ref()
+            .unwrap_or_else(|| panic!("{} does not export wasi:http/client", self.name))
+    }
+
+    /// The exported `wasi:http/handler` of a gate, which takes requests created by the host, see
+    /// [`host_request`].
+    pub fn gated_handler(&self) -> &gated::handler::Guest {
+        self.gated_handler
+            .as_ref()
+            .unwrap_or_else(|| panic!("{} does not export wasi:http/handler", self.name))
     }
 
     /// Whether the component exports `wasi:http/types`.
@@ -900,6 +1083,46 @@ impl TestSubject {
     /// The test subject's exported interfaces.
     pub fn exports(&self) -> &Exports {
         &self.exports
+    }
+
+    /// Send a request through the gate's `wasi:http/client`, the status of the response or the
+    /// error.
+    pub async fn send(
+        &mut self,
+        method: http::Method,
+        uri: &str,
+    ) -> Result<std::result::Result<u16, HttpErrorCode>> {
+        let uri = uri.to_string();
+        self.run(async move |accessor, gate| {
+            let request = host_request(accessor, method, &uri)?;
+            Ok(
+                match gate.gated_client().call_send(accessor, request).await? {
+                    Ok(response) => Ok(response_status(accessor, &response)?),
+                    Err(err) => Err(err),
+                },
+            )
+        })
+        .await
+    }
+
+    /// Handle a request with the gate's `wasi:http/handler`, the status of the response or the
+    /// error.
+    pub async fn handle(
+        &mut self,
+        method: http::Method,
+        uri: &str,
+    ) -> Result<std::result::Result<u16, HttpErrorCode>> {
+        let uri = uri.to_string();
+        self.run(async move |accessor, gate| {
+            let request = host_request(accessor, method, &uri)?;
+            Ok(
+                match gate.gated_handler().call_handle(accessor, request).await? {
+                    Ok(response) => Ok(response_status(accessor, &response)?),
+                    Err(err) => Err(err),
+                },
+            )
+        })
+        .await
     }
 
     /// Run a test body against the test subject's exports.
