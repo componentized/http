@@ -21,7 +21,7 @@ jobs:
         # the versions pinned in tools/Cargo.toml, on the path for later steps
         run: |
           make tools
-          echo "${PWD}/target/tools/bin" >> "${GITHUB_PATH}"
+          make -s tools-path >> "${GITHUB_PATH}"
       - name: Sync wit
         run: make wit
       - name: Check for drift in generated wit
@@ -73,7 +73,7 @@ jobs:
       - name: Install tools
         run: |
           make tools
-          echo "${PWD}/target/tools/bin" >> "${GITHUB_PATH}"
+          make -s tools-path >> "${GITHUB_PATH}"
       - name: Install cosign
         uses: sigstore/cosign-installer@v4.1.2
       - name: Download components.tar

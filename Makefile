@@ -4,7 +4,7 @@ export RUST_BACKTRACE ?= 1
 export WASMTIME_BACKTRACE_DETAILS ?= 1
 
 COMPONENTS_DIR := target/components
-TOOLS_DIR := target/tools
+TOOLS_DIR := target/tools/$(shell rustc --print host-tuple)
 # absolute, tools also run from other directories, e.g. `cd components && wkg fetch`
 export PATH := $(abspath $(TOOLS_DIR))/bin:$(PATH)
 
@@ -12,7 +12,7 @@ export PATH := $(abspath $(TOOLS_DIR))/bin:$(PATH)
 CARGO_INSTALL := $(if $(shell command -v cargo-binstall 2> /dev/null),cargo binstall --no-confirm --disable-telemetry,cargo install)
 
 COMPONENTS = $(sort $(foreach file,$(wildcard $(addprefix components/*/,wit/*.constants.wit *.properties *.wac *.wkg Cargo.toml)),$(word 2,$(subst /, ,$(file)))))
-TOOLS := componentized-constants-cli static-config wac-cli wasm-tools wkg
+TOOLS := componentized-constants-cli static-config wac-cli wasm-tools wasmtime-cli wkg
 
 export WKG_CONFIG_FILE := $(abspath .config/wasm-pkg/config.toml)
 
@@ -41,13 +41,17 @@ test: components
 
 
 tool_version = $(shell sed -n 's/^$(1) = "=\(.*\)"$$/\1/p' tools/Cargo.toml)
-# a stamp naming the version of a tool installed in target/tools/bin, e.g. `wkg@0.16.1`, the binary
+# a stamp naming the version of a tool installed in $(TOOLS_DIR)/bin, e.g. `wkg@0.16.1`, the binary
 # does not say which version it is. Bumping the pinned version names a stamp that does not exist yet,
 # so the tool is installed again.
 tool = $(TOOLS_DIR)/.installed/$(1)@$(call tool_version,$(1))
 
 .PHONY: tools ## Install the cli tools pinned in tools/Cargo.toml
 tools: $(foreach name,$(TOOLS),$(call tool,$(name)))
+
+.PHONY: tools-path ## Print the directory of the installed tools for this platform, to add to the PATH
+tools-path:
+	@echo $(abspath $(TOOLS_DIR))/bin
 
 define INSTALL_TOOL
 
