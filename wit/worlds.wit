@@ -1,4 +1,4 @@
-package componentized:http@0.1.0-dev;
+package componentized:http@0.1.0;
 
 world imports {
     import client;
