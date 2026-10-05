@@ -46,7 +46,7 @@ pub mod gate_bindings {
             package componentized:test-harness-gate;
 
             world gate {
-                import componentized:http/latch@0.1.0;
+                import componentized:http/latch@0.1.1-dev;
                 import wasi:config/store@0.2.0-rc.1;
                 import wasi:logging/logging@0.1.0-draft;
                 export wasi:http/client@0.3.0;
@@ -75,8 +75,8 @@ pub mod bindings {
 
             world harness {
                 import wasi:logging/logging@0.1.0-draft;
-                import componentized:http/client@0.1.0;
-                export componentized:http/client@0.1.0;
+                import componentized:http/client@0.1.1-dev;
+                export componentized:http/client@0.1.1-dev;
                 export wasi:http/types@0.3.0;
                 export wasi:http/client@0.3.0;
                 export wasi:http/handler@0.3.0;

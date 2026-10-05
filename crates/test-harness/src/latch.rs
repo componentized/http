@@ -198,7 +198,7 @@ pub(crate) fn add_to_linker(linker: &mut Linker<Ctx>) -> Result<()> {
 /// The most latches a `latch-n` component aggregates.
 pub(crate) const LATCH_N_MAX: usize = 5;
 
-const LATCH_INTERFACE: &str = "componentized:http/latch@0.1.0";
+const LATCH_INTERFACE: &str = "componentized:http/latch@0.1.1-dev";
 
 /// Whether the latch component imports a latch, which it wraps.
 pub(crate) fn imports_latch(latch: &[u8]) -> Result<bool> {
