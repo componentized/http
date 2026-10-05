@@ -1,7 +1,7 @@
-@since(version = 0.1.0-dev)
+@since(version = 0.1.0)
 interface client {
 
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     enum method {
         get,
         post,
@@ -14,7 +14,7 @@ interface client {
         query,
     }
 
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     variant error-code {
         /// The response was a redirect past `request-options.max-redirects`.
         /// Contains the redirect response, and the number of redirects
@@ -29,7 +29,7 @@ interface client {
     }
 
     /// The request to send to follow a redirect.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     record redirect-request {
         method: method,
         url: string,
@@ -43,13 +43,13 @@ interface client {
     }
 
     /// An error reading the trailers of a response, after its body.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     variant trailers-error-code {
         other(option<string>),
     }
 
     /// Per-request options. None fields fall through to host defaults.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     record request-options {
         connect-timeout-ms: option<u32>,
         first-byte-timeout-ms: option<u32>,
@@ -64,7 +64,7 @@ interface client {
     /// A streaming HTTP response. The status and headers are available
     /// immediately; the body streams as `body`, and trailers (if any) resolve
     /// via `trailers` once the body stream is fully consumed.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     record http-response {
         status: u16,
         headers: list<tuple<string, string>>,
@@ -74,42 +74,42 @@ interface client {
 
     /// Send an HTTP request with an explicit method. Both the request body and
     /// the response body stream.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     request: async func(method: method, url: string, headers: list<tuple<string, string>>, body: option<stream<u8>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP GET request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     get: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP POST request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     post: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP PUT request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     put: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP DELETE request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     delete: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP PATCH request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     patch: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP HEAD request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     head: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP OPTIONS request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     options: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP TRACE request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     trace: async func(url: string, headers: list<tuple<string, string>>, options: option<request-options>) -> result<http-response, error-code>;
 
     /// HTTP QUERY request.
-    @since(version = 0.1.0-dev)
+    @since(version = 0.1.0)
     query: async func(url: string, headers: list<tuple<string, string>>, body: stream<u8>, options: option<request-options>) -> result<http-response, error-code>;
 }

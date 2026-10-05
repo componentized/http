@@ -18,7 +18,7 @@ Latch error CODE=invalid-config<latch-method> OPERATION=wasi:http/client#send ME
 
 Imports:
 
-- `componentized:http/latch@0.1.0-dev`: decides whether each request may proceed
+- `componentized:http/latch@0.1.0`: decides whether each request may proceed
 - `wasi:logging/logging@0.1.0-draft`: logs denials and latch errors
 - `wasi:http/types@0.3.0`: the requests being gated
 - `wasi:http/client@0.3.0`: the client the gated client wraps
