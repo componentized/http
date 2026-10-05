@@ -31,6 +31,9 @@ members = [
     "crates/test-harness",
 ]
 
+[workspace.package]
+version = "0.1.1-dev"
+
 [workspace.dependencies]
 bytes = "1"
 http = "1"
