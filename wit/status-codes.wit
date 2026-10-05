@@ -1,6 +1,6 @@
 /// HTTP status codes from the IANA HTTP Status Code Registry,
 /// https://www.iana.org/assignments/http-status-codes/
-/// @since(version = 0.1.0-dev)
+@since(version = 0.1.0-dev)
 interface status-codes {
     /// 100 Continue
     /// [RFC9110, Section 15.2.1]
