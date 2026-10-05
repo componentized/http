@@ -1,5 +1,5 @@
 package componentized:http-component;
 
 world status-codes {
-    export componentized:http/status-codes@0.1.0;
+    export componentized:http/status-codes@0.1.1-dev;
 }

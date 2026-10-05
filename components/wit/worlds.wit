@@ -2,11 +2,11 @@ package componentized:components;
 
 world client {
     import wasi:http/client@0.3.0;
-    export componentized:http/client@0.1.0;
+    export componentized:http/client@0.1.1-dev;
 }
 
 world gate-client {
-    import componentized:http/latch@0.1.0;
+    import componentized:http/latch@0.1.1-dev;
     import wasi:config/store@0.2.0-rc.1;
     import wasi:logging/logging@0.1.0-draft;
     import wasi:http/client@0.3.0;
@@ -14,7 +14,7 @@ world gate-client {
 }
 
 world gate-handler {
-    import componentized:http/latch@0.1.0;
+    import componentized:http/latch@0.1.1-dev;
     import wasi:config/store@0.2.0-rc.1;
     import wasi:logging/logging@0.1.0-draft;
     import wasi:http/handler@0.3.0;
@@ -25,23 +25,23 @@ world latch {
     import wasi:config/store@0.2.0-rc.1;
     import wasi:logging/logging@0.1.0-draft;
     import wasi:random/insecure@0.3.0;
-    import componentized:http/latch@0.1.0;
-    export componentized:http/latch@0.1.0;
+    import componentized:http/latch@0.1.1-dev;
+    export componentized:http/latch@0.1.1-dev;
 }
 
 world latch-n {
-    export componentized:http/latch@0.1.0;
-    import latch0: componentized:http/latch@0.1.0;
-    import latch1: componentized:http/latch@0.1.0;
-    import latch2: componentized:http/latch@0.1.0;
-    import latch3: componentized:http/latch@0.1.0;
-    import latch4: componentized:http/latch@0.1.0;
+    export componentized:http/latch@0.1.1-dev;
+    import latch0: componentized:http/latch@0.1.1-dev;
+    import latch1: componentized:http/latch@0.1.1-dev;
+    import latch2: componentized:http/latch@0.1.1-dev;
+    import latch3: componentized:http/latch@0.1.1-dev;
+    import latch4: componentized:http/latch@0.1.1-dev;
 }
 
 world trace-componentized-client {
-    import componentized:http/client@0.1.0;
+    import componentized:http/client@0.1.1-dev;
     import wasi:logging/logging@0.1.0-draft;
-    export componentized:http/client@0.1.0;
+    export componentized:http/client@0.1.1-dev;
 }
 
 world trace-types {

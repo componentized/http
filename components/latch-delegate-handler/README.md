@@ -28,8 +28,8 @@ export new local:latch-n2 {
 Imports:
 
 - `wasi:http/types@0.3.0`: the requests being authorized
-- `componentized:http/latch@0.1.0`: the wrapped latch, consulted for `wasi:http/handler` requests
+- `componentized:http/latch@0.1.1-dev`: the wrapped latch, consulted for `wasi:http/handler` requests
 
 Exports:
 
-- `componentized:http/latch@0.1.0`: the latch
+- `componentized:http/latch@0.1.1-dev`: the latch
