@@ -21,15 +21,9 @@ clean-tools:
 
 # each tool is a dependency of the tools package, the binaries it installs are listed in
 # [package.metadata.bins]
-$(TOOLS_MK): tools/Cargo.toml make/tools.mk
+$(TOOLS_MK): tools/Cargo.toml make/pinned.jq
 	@mkdir -p $(@D)
-	@set -o pipefail; cargo metadata --manifest-path tools/Cargo.toml --no-deps --format-version 1 | jq -r ' \
-		.packages[0] as $$tools \
-		| ($$tools.dependencies[].name | select($$tools.metadata.bins[.] == null) | error("\(.) is missing from [package.metadata.bins] in tools/Cargo.toml")), \
-		"TOOLS := \([$$tools.dependencies[].name] | join(" "))", \
-		"TOOLS_PINNED := \([$$tools.dependencies[] | "\(.name)@\(.req | ltrimstr("="))"] | join(" "))", \
-		($$tools.metadata.bins[][] | "\(ascii_upcase | gsub("-"; "_")) := $$(TOOLS_BIN)/\(.)") \
-		' > $@.tmp
+	@set -o pipefail; cargo metadata --manifest-path tools/Cargo.toml --no-deps --format-version 1 | jq -r -f make/pinned.jq > $@.tmp
 	@mv $@.tmp $@
 
 tool_version = $(patsubst $(1)@%,%,$(filter $(1)@%,$(TOOLS_PINNED)))
