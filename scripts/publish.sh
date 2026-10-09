@@ -93,7 +93,8 @@ digest=$(
 )
 
 if [[ -n "$PUBLISH_LOG" ]]; then
-    echo "${file} ${image}@${digest}" >> "$PUBLISH_LOG"
+    size=$(wc -c < "${COMPONENTS_DIR}/${component_file}" | tr -d ' ')
+    echo "${file} ${size} ${image}@${digest}" >> "$PUBLISH_LOG"
 fi
 
 if [[ "$SIGN" == true ]]; then
