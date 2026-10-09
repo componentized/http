@@ -109,10 +109,11 @@ jobs:
           {
             echo "## Published components"
             echo
-            echo "| File | Image |"
-            echo "| --- | --- |"
-            while read -r file image ; do
-              echo "| \`${file}\` | \`${image}\` |"
+            echo "| File | Size | Image |"
+            echo "| --- | --: | --- |"
+            while read -r file bytes image ; do
+              size=$( numfmt --to=iec-i --suffix=B --format=%.1f "${bytes}" )
+              echo "| \`${file}\` | ${size} | \`${image}\` |"
             done < "${RUNNER_TEMP}/published.txt"
           } > "${RUNNER_TEMP}/release-notes.md"
           cat "${RUNNER_TEMP}/release-notes.md"

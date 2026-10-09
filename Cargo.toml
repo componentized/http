@@ -50,3 +50,9 @@ wasmtime = { version = "49", features = ["component-model-async"] }
 wasmtime-wasi = { version = "49", features = ["p3"] }
 wasmtime-wasi-http = { version = "49", default-features = false, features = ["p3", "component-model-async"] }
 wit-bindgen = "0.62.0"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = "debuginfo"
