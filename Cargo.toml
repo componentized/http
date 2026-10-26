@@ -48,7 +48,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
 wac-graph = "0.12"
 wasmtime = { version = "49", features = ["component-model-async"] }
 wasmtime-wasi = { version = "49", features = ["p3"] }
-wasmtime-wasi-http = { version = "49", default-features = false, features = ["p3", "component-model-async"] }
+wasmtime-wasi-http = { version = "50", default-features = false, features = ["p3", "component-model-async"] }
 wit-bindgen = "0.62.0"
 
 [profile.release]
