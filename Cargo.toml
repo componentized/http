@@ -49,7 +49,7 @@ wac-graph = "0.12"
 wasmtime = { version = "50", features = ["component-model-async"] }
 wasmtime-wasi = { version = "50", features = ["p3"] }
 wasmtime-wasi-http = { version = "50", default-features = false, features = ["p3", "component-model-async"] }
-wit-bindgen = "0.62.0"
+wit-bindgen = "0.63.0"
 
 [profile.release]
 opt-level = "s"
