@@ -251,6 +251,7 @@ pub(crate) struct TraceRequest {
 
 impl TraceRequest {
     /// The host's request, to hand to the host, its trailers are forwarded.
+    #[allow(dead_code)]
     pub(crate) fn into_host(self) -> types::Request {
         let Self { request, trailers } = self;
         drop(trailers);
@@ -567,6 +568,7 @@ pub(crate) struct TraceResponse {
 
 impl TraceResponse {
     /// Trace a response from the host.
+    #[allow(dead_code)]
     pub(crate) fn new(response: types::Response) -> Self {
         let trailers = None;
         Self { response, trailers }
