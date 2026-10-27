@@ -16,8 +16,8 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Empty};
 use tokio::sync::{mpsc, oneshot};
 use wasmtime::component::{
-    Accessor, Component, FutureConsumer, FutureReader, HasData, HasSelf, Lift, Linker, Lower,
-    Resource, ResourceTable, Source, StreamConsumer, StreamReader, StreamResult,
+    Accessor, Component, FutureAny, FutureConsumer, FutureReader, HasData, HasSelf, Instance, Lift,
+    Linker, Lower, Resource, ResourceTable, Source, StreamConsumer, StreamReader, StreamResult,
 };
 use wasmtime::error::Context as _;
 use wasmtime::{Config, Engine, Result, Store, StoreContextMut, bail, format_err};
@@ -888,6 +888,8 @@ impl Harness {
     pub async fn build(self) -> Result<TestSubject> {
         let mut config = Config::new();
         config.wasm_component_model_async(true);
+        // std threads on wasm32-wasip3 are component model cooperative threads
+        config.wasm_component_model_threading(true);
         // named imports, e.g. `latch0` of a `latch-n` component composed with a latch
         config.wasm_component_model_implements(true);
         let engine = Engine::new(&config)?;
@@ -929,6 +931,7 @@ impl Harness {
         // exported by a gate takes the host's requests, a trace component takes its own
         let exports = Exports {
             name: self.subject,
+            instance,
             types: types::GuestIndices::new(&instance_pre)
                 .ok()
                 .and_then(|indices| indices.load(&mut store, &instance).ok()),
@@ -962,6 +965,7 @@ impl Harness {
 /// Accessing an interface the component does not export panics.
 pub struct Exports {
     name: String,
+    instance: Instance,
     types: Option<types::Guest>,
     client: Option<client::Guest>,
     handler: Option<handler::Guest>,
@@ -976,6 +980,49 @@ impl Exports {
         self.types
             .as_ref()
             .unwrap_or_else(|| panic!("{} does not export wasi:http/types", self.name))
+    }
+
+    /// `consume-body` of a `request` or `response` of the exported `wasi:http/types`, with a `res`
+    /// that resolves to `ok`.
+    ///
+    /// The test subject passes `res` through to the host's `consume-body`, which reads it. A future
+    /// transferred host to host requires the same Rust type on both ends, so unlike [`ready`], `res`
+    /// is created with wasmtime-wasi-http's error code, and passed untyped.
+    pub async fn consume_body(
+        &self,
+        accessor: &Accessor<Ctx>,
+        resource: &str,
+        this: ResourceAny,
+    ) -> Result<(
+        StreamReader<u8>,
+        FutureReader<Result<Option<ResourceAny>, ErrorCode>>,
+    )> {
+        type HttpErrorCode = wasmtime_wasi_http::p3::bindings::http::types::ErrorCode;
+        type Params = (ResourceAny, FutureAny);
+        type Results = ((
+            StreamReader<u8>,
+            FutureReader<Result<Option<ResourceAny>, ErrorCode>>,
+        ),);
+        let (func, res) = accessor.with(|mut store| -> Result<_> {
+            let interface = self
+                .instance
+                .get_export_index(&mut store, None, "wasi:http/types@0.3.0")
+                .ok_or_else(|| format_err!("{} does not export wasi:http/types", self.name))?;
+            let name = format!("[static]{resource}.consume-body");
+            let func = self
+                .instance
+                .get_export_index(&mut store, Some(&interface), &name)
+                .ok_or_else(|| format_err!("{} does not export {name}", self.name))?;
+            let func = self
+                .instance
+                .get_typed_func::<Params, Results>(&mut store, &func)?;
+            let res = FutureReader::new(&mut store, async {
+                Ok::<_, wasmtime::Error>(Ok::<(), HttpErrorCode>(()))
+            })?;
+            Ok((func, res.try_into_future_any(&mut store)?))
+        })?;
+        let (results,) = func.call_concurrent(accessor, (this, res)).await?;
+        Ok(results)
     }
 
     /// The exported `wasi:http/client` interface.

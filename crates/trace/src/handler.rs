@@ -15,7 +15,7 @@ impl Guest for Trace {
     async fn handle(request: Request) -> Result<Response, ErrorCode> {
         let request = request.into_inner::<TraceRequest>();
         trace!("OPERATION=wasi:http/handler#handle REQUEST={request}");
-        let response = handler::handle(request.request).await?;
+        let response = handler::handle(request.into_host()).await?;
         Ok(Response::new(TraceResponse::new(response)))
     }
 }
