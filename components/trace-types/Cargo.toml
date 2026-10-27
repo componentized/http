@@ -16,9 +16,15 @@ handler = []
 
 [dependencies]
 http-utils = { workspace = true }
-wit-bindgen = { workspace = true, features = ["async-spawn"] }
+# without std, see crates/wasip3-rt
+wasip3-rt = { workspace = true }
+wit-bindgen = { version = "0.63.0", default-features = false, features = ["macros", "realloc", "async"] }
 
 [dev-dependencies]
 test-harness = { workspace = true }
 tokio = { workspace = true }
 wasmtime = { workspace = true }
+
+[package.metadata.componentized]
+# built for wasm32-wasip3, see build/components.mk
+target = "wasm32-wasip3"

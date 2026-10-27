@@ -3,9 +3,22 @@
 //! Each component generates its own bindings for `wasi:http/types`, so the helpers for its types
 //! are macros, expanded at the call site for the component's type, e.g.
 //! `format_http_method!(types::Method, &method)`.
+//!
+//! Without std, a component built for wasm32-wasip3 doesn't link the parts of wasi-libc std uses, and
+//! the imports they need, e.g. `wasi:cli/stdin`.
+
+#![no_std]
+
+extern crate alloc;
+
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 #[doc(hidden)]
-pub use std::borrow::Cow;
+pub use alloc::borrow::Cow;
+#[doc(hidden)]
+pub use alloc::string::ToString;
 
 /// Format a wasi:http `error-code` for logs, as a `Cow<'static, str>`. The name of the variant as
 /// written in the WIT, in lower case, e.g. `http-request-denied`. A payload is appended with the
@@ -31,7 +44,7 @@ macro_rules! format_http_error_code {
                 "dns-error",
                 &[
                     ("rcode", payload.rcode.clone()),
-                    ("info-code", payload.info_code.map(|code| code.to_string())),
+                    ("info-code", payload.info_code.map(|code| $crate::ToString::to_string(&code))),
                 ],
             ),
             $($error_code)::+::DestinationNotFound => $crate::Cow::Borrowed("destination-not-found"),
@@ -57,7 +70,7 @@ macro_rules! format_http_error_code {
             $($error_code)::+::TlsAlertReceived(payload) => $crate::with_fields(
                 "tls-alert-received",
                 &[
-                    ("alert-id", payload.alert_id.map(|id| id.to_string())),
+                    ("alert-id", payload.alert_id.map(|id| $crate::ToString::to_string(&id))),
                     ("alert-message", payload.alert_message.clone()),
                 ],
             ),
@@ -66,7 +79,7 @@ macro_rules! format_http_error_code {
                 $crate::Cow::Borrowed("http-request-length-required")
             }
             $($error_code)::+::HttpRequestBodySize(size) => {
-                $crate::with_value("http-request-body-size", size.map(|size| size.to_string()))
+                $crate::with_value("http-request-body-size", size.map(|size| $crate::ToString::to_string(&size)))
             }
             $($error_code)::+::HttpRequestMethodInvalid => {
                 $crate::Cow::Borrowed("http-request-method-invalid")
@@ -77,7 +90,7 @@ macro_rules! format_http_error_code {
             }
             $($error_code)::+::HttpRequestHeaderSectionSize(size) => $crate::with_value(
                 "http-request-header-section-size",
-                size.map(|size| size.to_string()),
+                size.map(|size| $crate::ToString::to_string(&size)),
             ),
             $($error_code)::+::HttpRequestHeaderSize(None) => {
                 $crate::Cow::Borrowed("http-request-header-size")
@@ -87,7 +100,7 @@ macro_rules! format_http_error_code {
             }
             $($error_code)::+::HttpRequestTrailerSectionSize(size) => $crate::with_value(
                 "http-request-trailer-section-size",
-                size.map(|size| size.to_string()),
+                size.map(|size| $crate::ToString::to_string(&size)),
             ),
             $($error_code)::+::HttpRequestTrailerSize(payload) => {
                 $crate::with_field_size!("http-request-trailer-size", payload)
@@ -97,17 +110,17 @@ macro_rules! format_http_error_code {
             }
             $($error_code)::+::HttpResponseHeaderSectionSize(size) => $crate::with_value(
                 "http-response-header-section-size",
-                size.map(|size| size.to_string()),
+                size.map(|size| $crate::ToString::to_string(&size)),
             ),
             $($error_code)::+::HttpResponseHeaderSize(payload) => {
                 $crate::with_field_size!("http-response-header-size", payload)
             }
             $($error_code)::+::HttpResponseBodySize(size) => {
-                $crate::with_value("http-response-body-size", size.map(|size| size.to_string()))
+                $crate::with_value("http-response-body-size", size.map(|size| $crate::ToString::to_string(&size)))
             }
             $($error_code)::+::HttpResponseTrailerSectionSize(size) => $crate::with_value(
                 "http-response-trailer-section-size",
-                size.map(|size| size.to_string()),
+                size.map(|size| $crate::ToString::to_string(&size)),
             ),
             $($error_code)::+::HttpResponseTrailerSize(payload) => {
                 $crate::with_field_size!("http-response-trailer-size", payload)
@@ -260,7 +273,7 @@ macro_rules! with_field_size {
                 ("field-name", $payload.field_name.clone()),
                 (
                     "field-size",
-                    $payload.field_size.map(|size| size.to_string()),
+                    $payload.field_size.map(|size| $crate::ToString::to_string(&size)),
                 ),
             ],
         )

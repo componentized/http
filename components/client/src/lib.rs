@@ -1,4 +1,14 @@
+//! Without std, see crates/wasip3-rt.
+
+#![no_std]
+
+extern crate alloc;
+
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use url::Url;
+use wasip3_rt as _;
 
 wit_bindgen::generate!({
     path: "../wit",
@@ -305,15 +315,17 @@ fn map_trailers(
     wasi: FutureReader<Result<Option<Trailers>, WasiErrorCode>>,
 ) -> FutureReader<Result<Vec<(String, String)>, TrailersErrorCode>> {
     let (tx, rx) = wit_future::new(|| Ok(Vec::new()));
-    wit_bindgen::rt::async_support::spawn_local(async move {
-        let resolved = match wasi.await {
-            Ok(Some(t)) => Ok(read_fields(&t)),
-            Ok(None) => Ok(Vec::new()),
-            Err(e) => Err(TrailersErrorCode::Other(Some(format!(
-                "wasi:http error: {e:?}"
-            )))),
-        };
-        tx.write(resolved);
+    wasip3_rt::spawn(move || {
+        wit_bindgen::block_on(async move {
+            let resolved = match wasi.await {
+                Ok(Some(t)) => Ok(read_fields(&t)),
+                Ok(None) => Ok(Vec::new()),
+                Err(e) => Err(TrailersErrorCode::Other(Some(format!(
+                    "wasi:http error: {e:?}"
+                )))),
+            };
+            tx.write(resolved);
+        })
     });
     rx
 }
@@ -446,6 +458,7 @@ export!(HttpClient);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     fn location(value: &str) -> Vec<(String, String)> {
         vec![("Location".to_string(), value.to_string())]
@@ -456,7 +469,7 @@ mod tests {
     }
 
     /// Compare by debug output, the generated `Method` does not implement `PartialEq`.
-    fn assert_same(actual: impl std::fmt::Debug, expected: impl std::fmt::Debug, context: &str) {
+    fn assert_same(actual: impl core::fmt::Debug, expected: impl core::fmt::Debug, context: &str) {
         assert_eq!(format!("{actual:?}"), format!("{expected:?}"), "{context}");
     }
 

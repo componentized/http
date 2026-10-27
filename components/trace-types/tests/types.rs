@@ -1,7 +1,7 @@
 //! Tests for the `wasi:http/types` operations traced by every trace component, run against
 //! `trace-types`.
 
-use test_harness::{ErrorCode, Harness, LogEntry, Method, Scheme, ready};
+use test_harness::{ErrorCode, Harness, LogEntry, Method, Scheme, ready, resolve};
 
 fn traced(message: &str) -> LogEntry {
     LogEntry::trace("componentized-trace", message)
@@ -334,6 +334,46 @@ async fn response_traced() -> wasmtime::Result<()> {
             traced("OPERATION=wasi:http/types#fields.copy-all SELF=&----"),
             traced("OPERATION=wasi:http/types#response.consume-body THIS=&----"),
         ]
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn trailers_passed_through_consume_body() -> wasmtime::Result<()> {
+    let mut trace = Harness::new("trace-types").build().await?;
+    let (request_trailers, response_trailers) = trace
+        .run(async |accessor, trace| {
+            let types = trace.wasi_http_types();
+            let headers = types.fields().call_constructor(accessor).await?;
+            // an error, the trailers of a dropped writer are `ok(none)`
+            let trailers = ready(accessor, Err(ErrorCode::HttpProtocolError))?;
+            let (request, _transmitted) = types
+                .request()
+                .call_new(accessor, headers, None, trailers, None)
+                .await?;
+            let (_contents, trailers) = trace.consume_body(accessor, "request", request).await?;
+            let request_trailers = resolve(accessor, trailers).await?;
+
+            let headers = types.fields().call_constructor(accessor).await?;
+            let trailers = ready(accessor, Err(ErrorCode::HttpProtocolError))?;
+            let (response, _transmitted) = types
+                .response()
+                .call_new(accessor, headers, None, trailers)
+                .await?;
+            let (_contents, trailers) = trace.consume_body(accessor, "response", response).await?;
+            let response_trailers = resolve(accessor, trailers).await?;
+            Ok((request_trailers, response_trailers))
+        })
+        .await?;
+    // the trailers `new` was called with, a request or response created by the component reads
+    // them back from it
+    assert!(
+        matches!(request_trailers, Err(ErrorCode::HttpProtocolError)),
+        "{request_trailers:?}"
+    );
+    assert!(
+        matches!(response_trailers, Err(ErrorCode::HttpProtocolError)),
+        "{response_trailers:?}"
     );
     Ok(())
 }

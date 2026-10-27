@@ -29,10 +29,8 @@ members = [
     "crates/http-latch-n",
     "crates/http-utils",
     "crates/test-harness",
+    "crates/wasip3-rt",
 ]
-
-[workspace.package]
-version = "0.1.1-dev"
 
 [workspace.dependencies]
 bytes = "1"
@@ -41,9 +39,8 @@ http-body-util = "0.1"
 http-latch = { path = "./crates/http-latch" }
 http-latch-n = { path = "./crates/http-latch-n" }
 http-utils = { path = "./crates/http-utils" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 test-harness = { path = "./crates/test-harness" }
+wasip3-rt = { path = "./crates/wasip3-rt" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
 wac-graph = "0.12"
 wasmtime = { version = "50", features = ["component-model-async"] }

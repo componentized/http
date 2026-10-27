@@ -6,8 +6,16 @@
 //!
 //! - `client`: exports `wasi:http/client`
 //! - `handler`: exports `wasi:http/handler`
+//!
+//! Without std, see crates/wasip3-rt.
 
-use std::fmt::Display;
+#![no_std]
+
+extern crate alloc;
+
+use core::fmt::Display;
+
+use wasip3_rt as _;
 
 mod types;
 
@@ -23,14 +31,14 @@ macro_rules! trace {
         $crate::wasi::logging::logging::log(
             $crate::wasi::logging::logging::Level::Trace,
             "componentized-trace",
-            &format!($dst, $($arg)*),
+            &::alloc::format!($dst, $($arg)*),
         );
     };
     ($dst:expr) => {
         $crate::wasi::logging::logging::log(
             $crate::wasi::logging::logging::Level::Trace,
             "componentized-trace",
-            &format!($dst),
+            &::alloc::format!($dst),
         );
     };
 }
@@ -41,7 +49,7 @@ const HANDLE_MODULUS: u32 = 16u32.pow(HANDLE_DIGITS);
 
 /// Write the trailing hex digits of a resource handle, padded with zeros and prefixed with `&`,
 /// e.g. `&002a`. The prefix marks the value as a handle, a reference to a resource.
-fn fmt_handle(f: &mut std::fmt::Formatter<'_>, handle: u32) -> std::fmt::Result {
+fn fmt_handle(f: &mut core::fmt::Formatter<'_>, handle: u32) -> core::fmt::Result {
     write!(
         f,
         "&{:0width$x}",
@@ -53,7 +61,7 @@ fn fmt_handle(f: &mut std::fmt::Formatter<'_>, handle: u32) -> std::fmt::Result 
 struct DisplayOption<T>(Option<T>);
 
 impl<T: Display> Display for DisplayOption<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self(Some(value)) => write!(f, "some<{value}>"),
             Self(None) => f.write_str("none"),

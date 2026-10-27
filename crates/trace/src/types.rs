@@ -1,4 +1,6 @@
-use std::fmt::Display;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::fmt::Display;
 
 use crate::{
     DisplayOption, Trace,
@@ -26,6 +28,68 @@ pub(crate) struct TraceFields {
 impl TraceFields {
     fn new(fields: types::Fields) -> Self {
         Self { fields }
+    }
+}
+
+/// The trailers a request or response was created with by `new`, adapted to the trailers of the
+/// host's request or response once the host needs them.
+///
+/// The host's request or response is created with trailers this component writes. `consume-body` of
+/// a request or response created here gets those trailers back from the host. Reading them would
+/// read a future this component also writes, which the component model doesn't allow, so the guest's
+/// own trailers are returned instead.
+pub(crate) struct GuestTrailers {
+    /// The guest's trailers and the writer of the host's, until one of them is taken.
+    pending: Option<(GuestTrailersReader, HostTrailersWriter)>,
+}
+
+type GuestTrailersReader = wit_bindgen::FutureReader<Result<Option<Trailers>, ErrorCode>>;
+type HostTrailersReader = wit_bindgen::FutureReader<Result<Option<types::Trailers>, ErrorCode>>;
+type HostTrailersWriter = wit_bindgen::FutureWriter<Result<Option<types::Trailers>, ErrorCode>>;
+
+impl GuestTrailers {
+    /// Defer adapting `trailers`, returns the trailers for the host's request or response.
+    fn new(trailers: GuestTrailersReader) -> (Self, HostTrailersReader) {
+        let (host_tx, host_rx) = wit_future::new(|| Ok(None));
+        let pending = Some((trailers, host_tx));
+        (Self { pending }, host_rx)
+    }
+
+    /// The guest's trailers, in place of the host's `trailers` returned by `consume-body`, which are
+    /// dropped unread.
+    fn into_guest(mut self, trailers: HostTrailersReader) -> GuestTrailersReader {
+        let (guest, host_tx) = self
+            .pending
+            .take()
+            .expect("trailers are pending until taken");
+        drop(trailers);
+        // dropping a writer writes its default, which needs a task, a sync export has none
+        wasip3_rt::spawn(move || {
+            wit_bindgen::block_on(async move {
+                let _ = host_tx.write(Ok(None)).await;
+            })
+        });
+        guest
+    }
+}
+
+impl Drop for GuestTrailers {
+    /// Forward the guest's trailers to the host's, e.g. the request is sent or dropped.
+    fn drop(&mut self) {
+        let Some((guest, host_tx)) = self.pending.take() else {
+            return;
+        };
+        // a sync export has no task to spawn into, so the future runs on its own thread
+        wasip3_rt::spawn(move || {
+            wit_bindgen::block_on(async move {
+                let trailers = match guest.await {
+                    Ok(None) => Ok(None),
+                    Ok(Some(trailers)) => Ok(Some(trailers.into_inner::<TraceFields>().fields)),
+                    Err(err) => Err(err),
+                };
+                let _ = host_tx.write(trailers).await;
+            })
+        });
     }
 }
 
@@ -165,7 +229,7 @@ impl GuestFields for TraceFields {
 }
 
 impl Display for TraceFields {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         fmt_handle(f, self.fields.handle())
     }
 }
@@ -173,19 +237,24 @@ impl Display for TraceFields {
 struct DisplayFieldValue(FieldValue);
 
 impl Display for DisplayFieldValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let Self(value) = self;
         f.write_str(&String::from_utf8_lossy(value))
     }
 }
 
 pub(crate) struct TraceRequest {
-    pub(crate) request: types::Request,
+    request: types::Request,
+    /// The trailers of a request created with `request.new`.
+    trailers: Option<GuestTrailers>,
 }
 
 impl TraceRequest {
-    pub(crate) fn new(request: types::Request) -> Self {
-        Self { request }
+    /// The host's request, to hand to the host, its trailers are forwarded.
+    pub(crate) fn into_host(self) -> types::Request {
+        let Self { request, trailers } = self;
+        drop(trailers);
+        request
     }
 }
 
@@ -220,18 +289,11 @@ impl GuestRequest for TraceRequest {
     ) -> (Request, wit_bindgen::FutureReader<Result<(), ErrorCode>>) {
         trace!("OPERATION=wasi:http/types#request.new");
         let headers = headers.into_inner::<TraceFields>().fields;
-        let (trailers_tx, trailers_rx) = wit_future::new(|| Ok(None));
-        wit_bindgen::spawn_local(async move {
-            let trailers = match trailers.await {
-                Ok(None) => Ok(None),
-                Ok(Some(trailers)) => Ok(Some(trailers.into_inner::<TraceFields>().fields)),
-                Err(err) => Err(err),
-            };
-            let _ = trailers_tx.write(trailers).await;
-        });
+        let (trailers, host_trailers) = GuestTrailers::new(trailers);
         let options = options.map(|options| options.into_inner::<TraceRequestOptions>().options);
-        let (request, read) = types::Request::new(headers, contents, trailers_rx, options);
-        (Request::new(Self::new(request)), read)
+        let (request, read) = types::Request::new(headers, contents, host_trailers, options);
+        let trailers = Some(trailers);
+        (Request::new(Self { request, trailers }), read)
     }
 
     #[doc = " Get the Method for the Request."]
@@ -359,35 +421,43 @@ impl GuestRequest for TraceRequest {
     ) {
         let this = this.into_inner::<TraceRequest>();
         trace!("OPERATION=wasi:http/types#request.consume-body THIS={this}");
-        let request = this.request;
+        let TraceRequest {
+            request,
+            trailers: guest_trailers,
+        } = this;
         let (contents, trailers) = types::Request::consume_body(request, res);
+        if let Some(guest_trailers) = guest_trailers {
+            return (contents, guest_trailers.into_guest(trailers));
+        }
         let (trailers_tx, trailers_rx) = wit_future::new(|| Ok(None));
-        wit_bindgen::spawn_local(async move {
-            let trailers = match trailers.await {
-                Ok(None) => Ok(None),
-                Ok(Some(trailers)) => Ok(Some(Trailers::new(TraceFields::new(trailers)))),
-                Err(err) => Err(err),
-            };
-            let _ = trailers_tx.write(trailers).await;
+        wasip3_rt::spawn(move || {
+            wit_bindgen::block_on(async move {
+                let trailers = match trailers.await {
+                    Ok(None) => Ok(None),
+                    Ok(Some(trailers)) => Ok(Some(Trailers::new(TraceFields::new(trailers)))),
+                    Err(err) => Err(err),
+                };
+                let _ = trailers_tx.write(trailers).await;
+            })
         });
         (contents, trailers_rx)
     }
 }
 
 impl Display for TraceRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         fmt_handle(f, self.request.handle())
     }
 }
 
 impl Display for Method {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(&http_utils::format_http_method!(types::Method, self))
     }
 }
 
 impl Display for Scheme {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(&http_utils::format_http_scheme!(types::Scheme, self))
     }
 }
@@ -484,18 +554,22 @@ impl GuestRequestOptions for TraceRequestOptions {
 }
 
 impl Display for TraceRequestOptions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         fmt_handle(f, self.options.handle())
     }
 }
 
 pub(crate) struct TraceResponse {
     response: types::Response,
+    /// The trailers of a response created with `response.new`.
+    trailers: Option<GuestTrailers>,
 }
 
 impl TraceResponse {
+    /// Trace a response from the host.
     pub(crate) fn new(response: types::Response) -> Self {
-        Self { response }
+        let trailers = None;
+        Self { response, trailers }
     }
 }
 
@@ -521,17 +595,10 @@ impl GuestResponse for TraceResponse {
     ) -> (Response, wit_bindgen::FutureReader<Result<(), ErrorCode>>) {
         trace!("OPERATION=wasi:http/types#response.new");
         let headers = headers.into_inner::<TraceFields>().fields;
-        let (trailers_tx, trailers_rx) = wit_future::new(|| Ok(None));
-        wit_bindgen::spawn_local(async move {
-            let trailers = match trailers.await {
-                Ok(None) => Ok(None),
-                Ok(Some(trailers)) => Ok(Some(trailers.into_inner::<TraceFields>().fields)),
-                Err(err) => Err(err),
-            };
-            let _ = trailers_tx.write(trailers).await;
-        });
-        let (response, read) = types::Response::new(headers, contents, trailers_rx);
-        (Response::new(Self::new(response)), read)
+        let (trailers, host_trailers) = GuestTrailers::new(trailers);
+        let (response, read) = types::Response::new(headers, contents, host_trailers);
+        let trailers = Some(trailers);
+        (Response::new(Self { response, trailers }), read)
     }
 
     #[doc = " Get the HTTP Status Code for the Response."]
@@ -583,23 +650,31 @@ impl GuestResponse for TraceResponse {
     ) {
         let this = this.into_inner::<TraceResponse>();
         trace!("OPERATION=wasi:http/types#response.consume-body THIS={this}");
-        let response = this.response;
+        let TraceResponse {
+            response,
+            trailers: guest_trailers,
+        } = this;
         let (contents, trailers) = types::Response::consume_body(response, res);
+        if let Some(guest_trailers) = guest_trailers {
+            return (contents, guest_trailers.into_guest(trailers));
+        }
         let (trailers_tx, trailers_rx) = wit_future::new(|| Ok(None));
-        wit_bindgen::spawn_local(async move {
-            let trailers = match trailers.await {
-                Ok(None) => Ok(None),
-                Ok(Some(trailers)) => Ok(Some(Trailers::new(TraceFields::new(trailers)))),
-                Err(err) => Err(err),
-            };
-            let _ = trailers_tx.write(trailers).await;
+        wasip3_rt::spawn(move || {
+            wit_bindgen::block_on(async move {
+                let trailers = match trailers.await {
+                    Ok(None) => Ok(None),
+                    Ok(Some(trailers)) => Ok(Some(Trailers::new(TraceFields::new(trailers)))),
+                    Err(err) => Err(err),
+                };
+                let _ = trailers_tx.write(trailers).await;
+            })
         });
         (contents, trailers_rx)
     }
 }
 
 impl Display for TraceResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         fmt_handle(f, self.response.handle())
     }
 }
