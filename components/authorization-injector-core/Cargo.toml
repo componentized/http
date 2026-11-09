@@ -1,0 +1,19 @@
+[package]
+name = "authorization-injector-core"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+http-utils = { workspace = true }
+# spawn forwards the result of transmitting the request with the authorization header
+wit-bindgen = { workspace = true, features = ["async-spawn"] }
+
+[dev-dependencies]
+http = { workspace = true }
+test-harness = { workspace = true }
+tokio = { workspace = true }
+wasmtime = { workspace = true }
