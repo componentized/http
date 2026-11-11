@@ -1,0 +1,6 @@
+package componentized:http;
+
+export new local:authorization-injector-core {
+    methods: new local:authorization-injector-method-config {}.store,
+    ...
+}...;

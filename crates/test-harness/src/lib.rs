@@ -5,7 +5,7 @@
 //! with either `wasi:http/client` or `wasi:http/handler`, never reach the network, they are
 //! recorded and answered with a canned response.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
@@ -35,7 +35,9 @@ use crate::gate_bindings::exports::wasi::http as gated;
 
 mod latch;
 
-pub use latch::{Authorization, HostLatch, Observation, host_request, response_status};
+pub use latch::{
+    Authorization, HostLatch, Observation, host_request, host_request_with, response_status,
+};
 
 /// Bindings for gates, which export `wasi:http/client` and `wasi:http/handler` with the host's
 /// `wasi:http/types`, and import a latch.
@@ -569,6 +571,7 @@ pub struct Ctx {
     recorder: Recorder,
     latch: HostLatch,
     config: Vec<(String, String)>,
+    named_config: HashMap<String, Vec<(String, String)>>,
 }
 
 impl WasiView for Ctx {
@@ -794,6 +797,7 @@ pub struct Harness {
     latches: Vec<String>,
     host_latch: Option<HostLatch>,
     config: Vec<(String, String)>,
+    named_config: HashMap<String, Vec<(String, String)>>,
 }
 
 impl Harness {
@@ -805,6 +809,7 @@ impl Harness {
             latches: vec![],
             host_latch: None,
             config: vec![],
+            named_config: HashMap::new(),
         }
     }
 
@@ -831,6 +836,19 @@ impl Harness {
     /// Values are returned by `get-all` in the order they are added.
     pub fn config(mut self, key: &str, value: &str) -> Self {
         self.config.push((key.to_string(), value.to_string()));
+        self
+    }
+
+    /// Define a `wasi:config/store` under a named import, e.g. `methods`, with the values, in
+    /// order. Empty values define an empty store.
+    pub fn named_config(mut self, import: &str, values: &[(&str, &str)]) -> Self {
+        self.named_config.insert(
+            import.to_string(),
+            values
+                .iter()
+                .map(|(key, value)| (key.to_string(), value.to_string()))
+                .collect(),
+        );
         self
     }
 
@@ -905,6 +923,9 @@ impl Harness {
         upstream_client::add_to_linker::<_, UpstreamClient>(&mut linker, |ctx| ctx)?;
         logging::add_to_linker::<_, HasSelf<Ctx>>(&mut linker, |ctx| ctx)?;
         latch::add_to_linker(&mut linker)?;
+        for import in self.named_config.keys() {
+            latch::add_named_config_to_linker(&mut linker, import)?;
+        }
 
         let recorder = Recorder::default();
         let mut store = Store::new(
@@ -920,6 +941,7 @@ impl Harness {
                 recorder: recorder.clone(),
                 latch: self.host_latch.unwrap_or_else(HostLatch::defer),
                 config: self.config,
+                named_config: self.named_config,
             },
         );
         let instance_pre = linker.instantiate_pre(&component)?;

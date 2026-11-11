@@ -65,6 +65,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "authorization-injector-core"
+version = "0.1.0"
+dependencies = [
+ "http",
+ "http-utils",
+ "test-harness",
+ "tokio",
+ "wasmtime",
+ "wit-bindgen",
+]
+
+[[package]]
+name = "authorization-injector-tests"
+version = "0.1.0"
+dependencies = [
+ "http",
+ "test-harness",
+ "tokio",
+ "wasmtime",
+]
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2646,6 +2668,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b85a987ab61d365382d25c7d47e26edd48941b3bf6e3fbf76eff918bc71dab06"
 dependencies = [
  "bitflags",
+ "futures",
  "wit-bindgen-rust-macro",
 ]
 
