@@ -22,6 +22,8 @@ A collection of utility components that remix wasi:http types and interfaces.
 
 ## Components
 
+- [`authorization-injector`](./components/authorization-injector/): adds an `authorization` header to requests sent with `wasi:http/client`, by origin, with every standard method except TRACE, `authorization-injector-core` with [`authorization-injector-method-config`](./components/authorization-injector-method-config/)
+- [`authorization-injector-core`](./components/authorization-injector-core/): adds an `authorization` header to requests sent with `wasi:http/client`, by origin and method, configured with `wasi:config/store`
 - [`client`](./components/client/): a higher-level HTTP client that delegates to `wasi:http/client`
 - [`status-codes`](./components/status-codes/): constants for HTTP status codes
 

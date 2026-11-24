@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
+    "components/authorization-injector-core",
+    "components/authorization-injector",
     "components/client",
     "components/gate",
     "components/gate-client",

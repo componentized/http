@@ -168,6 +168,32 @@ impl store::Host for Ctx {
     }
 }
 
+/// Define a `wasi:config/store` under the named import, with the values of
+/// [`crate::Harness::named_config`].
+pub(crate) fn add_named_config_to_linker(linker: &mut Linker<Ctx>, import: &str) -> Result<()> {
+    let mut instance = linker.instance(import)?;
+    let name = import.to_string();
+    instance.func_wrap(
+        "get",
+        move |store: StoreContextMut<'_, Ctx>, (key,): (String,)| {
+            let value = store.data().named_config[&name]
+                .iter()
+                .rev()
+                .find(|(k, _)| *k == key)
+                .map(|(_, v)| v.clone());
+            Ok((Ok::<_, store::Error>(value),))
+        },
+    )?;
+    let name = import.to_string();
+    instance.func_wrap(
+        "get-all",
+        move |store: StoreContextMut<'_, Ctx>, (): ()| {
+            Ok((Ok::<_, store::Error>(store.data().named_config[&name].clone()),))
+        },
+    )?;
+    Ok(())
+}
+
 /// Define the host latch, `wasi:config/store`, and the host latch under the named imports of a
 /// `latch-n` component, e.g. `latch1`.
 pub(crate) fn add_to_linker(linker: &mut Linker<Ctx>) -> Result<()> {
@@ -251,16 +277,35 @@ pub fn host_request(
     method: http::Method,
     uri: &str,
 ) -> Result<Resource<Request>> {
+    host_request_with(accessor, method, uri, &[], &[])
+}
+
+/// A request created by the host with headers and a body, for a gate's `wasi:http/client` or
+/// `wasi:http/handler`.
+pub fn host_request_with(
+    accessor: &Accessor<Ctx>,
+    method: http::Method,
+    uri: &str,
+    headers: &[(&str, &str)],
+    body: &[u8],
+) -> Result<Resource<Request>> {
     let uri: http::Uri = uri.parse()?;
     let parts = uri.into_parts();
-    let body = http_body_util::Empty::<bytes::Bytes>::new()
+    let mut fields = wasmtime_wasi_http::FieldMap::new_mutable(usize::MAX);
+    for (name, value) in headers {
+        fields
+            .append_raw(name.parse()?, value.parse()?)
+            .map_err(|err| format_err!("invalid header {name}: {err}"))?;
+    }
+    fields.set_immutable();
+    let body = http_body_util::Full::new(bytes::Bytes::copy_from_slice(body))
         .map_err(|never| -> wasmtime_wasi_http::Error { match never {} });
     let (request, _transmitted) = Request::new(
         method,
         parts.scheme,
         parts.authority,
         parts.path_and_query,
-        wasmtime_wasi_http::FieldMap::default(),
+        fields,
         None,
         body,
     );

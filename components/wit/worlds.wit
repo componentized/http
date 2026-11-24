@@ -5,6 +5,16 @@ world client {
     export componentized:http/client@0.1.1-dev;
 }
 
+world authorization-injector {
+    /// the authorization for each origin
+    import wasi:config/store@0.2.0-rc.1;
+    /// whether the authorization is added to requests with each method
+    import methods: wasi:config/store@0.2.0-rc.1;
+    import wasi:logging/logging@0.1.0-draft;
+    import wasi:http/client@0.3.0;
+    export wasi:http/client@0.3.0;
+}
+
 world gate-client {
     import componentized:http/latch@0.1.1-dev;
     import wasi:config/store@0.2.0-rc.1;
