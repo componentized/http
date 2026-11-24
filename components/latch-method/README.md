@@ -26,4 +26,4 @@ Imports:
 
 Exports:
 
-- `componentized:http/latch@0.1.1`: the latch
+- `componentized:http/latch@0.1.2-dev`: the latch

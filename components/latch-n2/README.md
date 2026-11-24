@@ -8,9 +8,9 @@ The latches are asked in order, `latch0`, `latch1`, and the first denial is the 
 
 Imports:
 
-- `latch0`: `componentized:http/latch@0.1.1`, a latch to aggregate
-- `latch1`: `componentized:http/latch@0.1.1`, a latch to aggregate
+- `latch0`: `componentized:http/latch@0.1.2-dev`, a latch to aggregate
+- `latch1`: `componentized:http/latch@0.1.2-dev`, a latch to aggregate
 
 Exports:
 
-- `componentized:http/latch@0.1.1`: the latch
+- `componentized:http/latch@0.1.2-dev`: the latch
